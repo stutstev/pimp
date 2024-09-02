@@ -11,7 +11,7 @@
 #                                             raspberry pi music player
 #                                                       -- -     -
 #  MIT License
-#  Copyright (c) 2022-2023 Steven Peguero
+#  Copyright (c) 2022-2024 Steven Peguero
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -55,7 +55,7 @@ show_dname_filter()
 		fi
 	}
 
-	local opt="$(printf '%s' "$*" | awk '{print $1}' | grep -o '^\-[a-zA-Z0-9]*')"
+	local opt="$(printf '%s' "$*" | awk '{print $1}' | grep -o '^-[a-zA-Z0-9]*')"
 	local str="$(printf '%s' "$*" | sed 's/^\-[a-zA-Z0-9]*//g' | sed 's/^[[:space:]]*//g')"
 
 	local opt_q=
@@ -109,7 +109,7 @@ show_dname_filter()
 		--bind 'insert:execute-silent(pimp play-sound filter)+execute(pimp file)+execute-silent(pimp play-sound filter)' \
 		--bind 'alt-q:abort' \
 		--bind 'ctrl-q:abort' \
-		--bind 'f5:execute-silent(pimp play-sound filter)+execute(pimp file)+execute-silent(pimp play-sound filter)' \
+		--bind 'f5:execute-silent(pimp play-sound filter)+execute(pimp file)+execute-silent(pimp play-sound return)' \
 		--bind 'f6:execute(pimp play; pimp play-sound select)' \
 		--bind '*:execute(pimp play; pimp play-sound select)' \
 		--bind "f7:reload(pimp dir ${opt_q})+abort"
@@ -247,7 +247,7 @@ play_music()
 	pkill -x espeak
 	pkill -x play
 
-	local opt="$(printf '%s' "$*" | awk '{print $1}' | grep -o '^\-[a-zA-Z0-9]*')"
+	local opt="$(printf '%s' "$*" | awk '{print $1}' | grep -o '^-[a-zA-Z0-9]*')"
 	local str="$(printf '%s' "$*" | sed 's/^\-[a-zA-Z0-9]*//g' | sed 's/^[[:space:]]*//g')"
 	local sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
@@ -453,6 +453,10 @@ play_sound()
 			;;
 		filter)
 			play -qn synth sine 1500 trim 0 0.05 gain -30
+			;;
+		return)
+			play -qn synth sine 1500 trim 0 0.05 gain -30
+			play -qn synth sine 1400 trim 0 0.05 gain -30
 			;;
 		play)
 			play -qn synth sine 1000 trim 0 0.05 gain -30
