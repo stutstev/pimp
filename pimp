@@ -11,7 +11,7 @@
 #                                             raspberry pi music player
 #                                                       -- -     -
 #  MIT License
-#  Copyright (c) 2022-2024 Steven Peguero
+#  Copyright (c) 2022-2025 Steven Peguero
 #
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
 #  of this software and associated documentation files (the "Software"), to deal
@@ -88,7 +88,7 @@ show_dname_filter()
 		--header 'pimp (dir)' \
 		--header-first \
 		--border rounded \
-		--color fg:15,fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:1,header:11,prompt:7,info:8,query:15 \
+		--color fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:1,header:11,prompt:7,info:8,query:15 \
 		--prompt '> ' \
 		--algo v1 \
 		--query "${str}" \
@@ -139,7 +139,7 @@ show_fpath_filter()
 		--header 'pimp (file)' \
 		--header-first \
 		--border rounded \
-		--color fg:15,fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:12,header:11,prompt:7,info:8,query:15 \
+		--color fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:12,header:11,prompt:7,info:8,query:15 \
 		--prompt '> ' \
 		--algo v1 \
 		--query "${str}" \
@@ -155,15 +155,15 @@ show_fpath_filter()
 		--bind 'alt-bspace:clear-query' \
 		--bind 'home:first' \
 		--bind 'end:last' \
-		--bind "esc:execute(printf '%s\n'    ${cmd_pimp_quit})+abort" \
-		--bind "tab:execute(printf '%s\n'    ${cmd_pimp_quit})+abort" \
-		--bind "insert:execute(printf '%s\n' ${cmd_pimp_quit})+abort" \
-		--bind "alt-q:execute(printf '%s\n'  ${cmd_pimp_quit})+abort" \
-		--bind "ctrl-q:execute(printf '%s\n' ${cmd_pimp_quit})+abort" \
-		--bind "f5:execute(printf '%s\n'     ${cmd_pimp_quit})+abort" \
-		--bind "f6:execute(printf '%s\n'     ${cmd_pimp_resume_playback})+abort" \
-		--bind "*:execute(printf '%s\n'      ${cmd_pimp_resume_playback})+abort" \
-		--bind "f7:execute(printf '%s\n'     ${cmd_pimp_refresh})+abort" | ( \
+		--bind "esc:become(printf '%s\n'    ${cmd_pimp_quit})+abort" \
+		--bind "tab:become(printf '%s\n'    ${cmd_pimp_quit})+abort" \
+		--bind "insert:become(printf '%s\n' ${cmd_pimp_quit})+abort" \
+		--bind "alt-q:become(printf '%s\n'  ${cmd_pimp_quit})+abort" \
+		--bind "ctrl-q:become(printf '%s\n' ${cmd_pimp_quit})+abort" \
+		--bind "f5:become(printf '%s\n'     ${cmd_pimp_quit})+abort" \
+		--bind "f6:become(printf '%s\n'     ${cmd_pimp_resume_playback})+abort" \
+		--bind "*:become(printf '%s\n'      ${cmd_pimp_resume_playback})+abort" \
+		--bind "f7:become(printf '%s\n'     ${cmd_pimp_refresh})+abort" | ( \
 
 		#  until `fzf` intuitively enables the processing of multi-line
 		#  output, a while-read subshell, along with case and return
@@ -326,18 +326,21 @@ play_music()
 			--msg-level=all=no,term-msg=status,statusline=status,cplayer=error,ffmpeg=fatal,ffmpeg/demuxer=error \
 			--no-audio-display \
 			--no-video \
+			--osd-level=0 \
 			--playlist="${fpath_playlist}" \
 			--save-position-on-quit \
 			--script="${fpath_mpv_wl_autosave_script}" \
-			--term-playing-msg='\nPlaying: ${filename}\n' \
-			--term-title='pimp' \
+			--term-playing-msg="\n\${filename}" \
+			--term-status-msg="\n\${time-pos} / \${duration} (\${percent-pos}%) (x\${speed}) \${?loop-file==inf:+LF }\${?mute==yes:+M }\${?pause==yes:(Paused)}" \
+			--term-title="pimp -- \${filename}" \
 			--vo=null \
 			--volume-max=100 \
 			--video=no \
 			--watch-later-directory="${dpath_mpv_wl}" \
 			--watch-later-options=volume,speed,pause,loop-file,start \
-			--watch-later-options-remove=mute,ab-loop \
-			"$()"
+			--watch-later-options-remove=mute,ab-loop
+
+		set_term_title
 	else
 		printf 'pimp: playlist file not found: %s\n' "${fpath_playlist}" >&2
 		return 2
