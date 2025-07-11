@@ -41,6 +41,9 @@ PIMP_DPATH_MPV_WL="${PIMP_DPATH_MPV_WL-"${PIMP_DPATH_CACHE}/playback"}"
 PIMP_DPATH_MUSIC="${PIMP_DPATH_MUSIC-"${HOME}/Music"}"
 PIMP_FPATH_PLAYLIST="${PIMP_FPATH_PLAYLIST-"${PIMP_DPATH_CACHE}/playlist"}"
 
+export PIMP_PROCESS=  #  exported environment variable that provides users with the programmatic ability
+                      #  to host pimp-exclusive `mpv` `lua` customizations via ${HOME}/.config/mpv/scripts.
+
 show_dname_filter()
 {
 	#  shows recursive and interactive list of subdirectories to play.
