@@ -103,21 +103,21 @@ show_dname_filter()
 		--layout reverse \
 		--preview "${fzf_preview}" \
 		--preview-window 0% \
-		--bind 'enter:execute(pimp app-rmpp; pimp play -ds ${opt_q} {}; pimp app-tone high ${opt_q})' \
-		--bind 'double-click:execute(pimp app-rmpp; pimp play -ds ${opt_q} {}; pimp app-tone high ${opt_q})' \
+		--bind 'enter:execute(pimp app-rmpp; pimp play -ds $opt_q {}; pimp app-tone high $opt_q)' \
+		--bind 'double-click:execute(pimp app-rmpp; pimp play -ds $opt_q {}; pimp app-tone high $opt_q)' \
 		--bind 'change:first' \
 		--bind 'bspace:clear-query' \
 		--bind 'home:first' \
 		--bind 'end:last' \
 		--bind 'esc:abort' \
 		--bind 'tab:abort' \
-		--bind 'insert:execute-silent(pimp app-tone ftgo ${opt_q})+execute(pimp file ${opt_q})+execute-silent(pimp app-tone ftbk ${opt_q})' \
+		--bind 'insert:execute-silent(pimp app-tone ftgo $opt_q)+execute(pimp file $opt_q)+execute-silent(pimp app-tone ftbk $opt_q)' \
 		--bind 'alt-q:abort' \
 		--bind 'ctrl-q:abort' \
-		--bind 'f5:execute-silent(pimp app-tone ftgo ${opt_q})+execute(pimp file ${opt_q})+execute-silent(pimp app-tone ftbk ${opt_q})' \
-		--bind 'f6:execute(pimp play ${opt_q}; pimp app-tone high ${opt_q})' \
-		--bind '*:execute(pimp play ${opt_q}; pimp app-tone high ${opt_q})' \
-		--bind "f7:reload(pimp dir ${opt_q})+abort"
+		--bind 'f5:execute-silent(pimp app-tone ftgo $opt_q)+execute(pimp file $opt_q)+execute-silent(pimp app-tone ftbk $opt_q)' \
+		--bind 'f6:execute(pimp play $opt_q; pimp app-tone high $opt_q)' \
+		--bind '*:execute(pimp play $opt_q; pimp app-tone high $opt_q)' \
+		--bind "f7:reload(pimp dir $opt_q)+abort"
 }
 
 show_fpath_filter()
@@ -175,7 +175,7 @@ show_fpath_filter()
 		--bind 'enter:select-all+accept' \
 		--bind 'double-click:select-all+accept' \
 		--bind 'change:first' \
-		--bind 'backward-eof:execute-silent(pimp app-tone clsh ${opt_q})' \
+		--bind 'backward-eof:execute-silent(pimp app-tone clsh $opt_q)' \
 		--bind 'alt-bspace:clear-query' \
 		--bind 'home:first' \
 		--bind 'end:last' \
