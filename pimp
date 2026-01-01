@@ -15,7 +15,6 @@
 #  Source is licensed under MIT License. Refer to LICENSE file for details.
 
 param="$(printf '%s\n' "$*" | awk '{$1=""; print}' | sed 's/^[[:space:]]*//g')"
-
 prereq_stop="pimp fzf mpv"
 prereq_cont="espeak sox"
 
@@ -359,7 +358,7 @@ play_music()
 			--save-position-on-quit \
 			--script="${fpath_playback_position_autosave_script}" \
 			--term-playing-msg="\n\${filename}" \
-			--term-status-msg="\n\${time-pos} / \${duration} (\${percent-pos}%) (x\${speed}) \${?loop-file==inf:+LF }\${?mute==yes:+M }\${?pause==yes:(Paused)}" \
+			--term-status-msg="\n(\${playlist-pos-1}/\${playlist-count}) \${time-pos} / \${duration} (\${percent-pos}%) (x\${speed}) \${?loop-file==inf:+LF }\${?mute==yes:+M }\${?pause==yes:(Paused)}" \
 			--term-title="pimp -- \${filename}" \
 			--vo=null \
 			--volume-max=100 \
