@@ -442,7 +442,7 @@ create_program_dirs()
 
 get_file_modtime()
 {
-	#  synopsis:  gets modified epoch timestamp of file.
+	#  synopsis:  gets unix epoch modification timestamp of a file.
 
 	local f="$1"
 	local modtime=
@@ -459,7 +459,7 @@ get_file_modtime()
 			modtime="$(stat -c %Y "${f}")"
 			printf '%s' "${modtime}"
 			;;
-		openbsd|*)
+		openbsd|darwin|*)
 			modtime="$(stat -f %m "${f}")"
 			printf '%s' "${modtime}"
 			;;
