@@ -222,7 +222,7 @@ display_fpath_fzf()
 
 			if [ ${i} -eq 200 ]  #  if 200th playlist item is processed (indicating playback delay).
 			then
-				play_tonal_sound ffpi "${fzf_opt}"
+				play_tonal_sound ffpi "${fzf_opt}" &
 			fi
 
 			#  create absolute path and add to playlist file:
