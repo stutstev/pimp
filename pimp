@@ -18,6 +18,7 @@ param="$(printf '%s\n' "$*" | awk '{$1=""; print}' | sed 's/^[[:space:]]*//g')"
 prereq_stop="pimp fzf mpv"
 prereq_cont="espeak sox"
 
+PIMP_DEBUG="${PIMP_DEBUG-0}"
 PIMP_DPATH_CACHE="${PIMP_DPATH_CACHE-"${HOME}/.cache/pimp"}"
 PIMP_DPATH_CACHE_PLAY_POS="${PIMP_DPATH_CACHE_PLAY_POS-"${PIMP_DPATH_CACHE}/playback"}"
 PIMP_DPATH_CONF="${PIMP_DPATH_CONF-"${HOME}/.config/pimp"}"
@@ -67,21 +68,20 @@ show_dname_filter()
 		sed 's/[[:space:]]*$//g'
 	)"
 
-	if opt q "${opt}"
+	if opt b "${opt}"
 	then
-		export opt_q='-q'
-		local fzf_preview=
-	else
-		export opt_q=
-		local fzf_preview='pimp app-speech {} && pimp app-tone high'
-
-		if [ -n "${str}" ]
-		then
-			(play_tonal_sound high &)
-		fi
+		#  omits opt to resume "play" tonal sound at start of music playback.
+		local opt="$(printf '%s' "${opt}" | tr -d b)"
 	fi
 
 	local dpath_music="${PIMP_DPATH_MUSIC}"
+	local fzf_out=
+	local fzf_query="${str}"
+
+	if [ -n "${opt}" ]
+	then
+		local fzf_opt="-${opt}"
+	fi
 
 	set_term_title
 
@@ -96,28 +96,28 @@ show_dname_filter()
 		--color fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:1,header:11,prompt:7,info:8,query:15 \
 		--prompt '> ' \
 		--algo v1 \
-		--query "${str}" \
+		--query "${fzf_query}" \
 		--literal \
 		--cycle \
 		--tac \
 		--layout reverse \
-		--preview "${fzf_preview}" \
+		--preview "pimp app-speech ${fzf_opt} {} && pimp app-tone high ${fzf_opt}" \
 		--preview-window 0% \
-		--bind 'enter:execute(pimp app-rmpp; pimp play -ds $opt_q {}; pimp app-tone high $opt_q)' \
-		--bind 'double-click:execute(pimp app-rmpp; pimp play -ds $opt_q {}; pimp app-tone high $opt_q)' \
+		--bind "enter:execute(pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
+		--bind "double-click:execute(pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
 		--bind 'change:first' \
 		--bind 'bspace:clear-query' \
 		--bind 'home:first' \
 		--bind 'end:last' \
 		--bind 'esc:abort' \
 		--bind 'tab:abort' \
-		--bind 'insert:execute-silent(pimp app-tone ftgo $opt_q)+execute(pimp file $opt_q)+execute-silent(pimp app-tone ftbk $opt_q)' \
+		--bind "insert:execute-silent(pimp app-tone ftgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ftbk ${fzf_opt})" \
 		--bind 'alt-q:abort' \
 		--bind 'ctrl-q:abort' \
-		--bind 'f5:execute-silent(pimp app-tone ftgo $opt_q)+execute(pimp file $opt_q)+execute-silent(pimp app-tone ftbk $opt_q)' \
-		--bind 'f6:execute(pimp play $opt_q; pimp app-tone high $opt_q)' \
-		--bind '*:execute(pimp play $opt_q; pimp app-tone high $opt_q)' \
-		--bind "f7:reload(pimp dir $opt_q)+abort"
+		--bind "f5:execute-silent(pimp app-tone ftgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ftbk ${fzf_opt})" \
+		--bind "f6:execute(pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
+		--bind "*:execute(pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
+		--bind "f7:reload(pimp dir ${fzf_opt})+abort"
 }
 
 show_fpath_filter()
@@ -138,12 +138,10 @@ show_fpath_filter()
 		sed 's/[[:space:]]*$//g'
 	)"
 
-	if opt q "${opt}"
+	if opt b "${opt}"
 	then
-		export opt_q='-q'
-	else
-		export opt_q=
-		(play_tonal_sound high &)
+		#  omits opt to resume "play" tonal sound at start of music playback.
+		local opt="$(printf '%s' "${opt}" | tr -d b)"
 	fi
 
 	local cmd_pimp_quit='10_cmd_filter_quit'
@@ -151,11 +149,19 @@ show_fpath_filter()
 	local cmd_pimp_resume_playback='30_cmd_resume_playback'
 	local dpath_music="${PIMP_DPATH_MUSIC}"
 	local fpath_playlist="${PIMP_FPATH_PLAYLIST}"
+	local fzf_opt=
+	local fzf_query="${str}"
 	local i=0
 	local int_modtime_plist_preloop="$(get_file_modtime "${fpath_playlist}")"
-	local int_modtime_plist_postloop=
+	local int_modtime_plist_pstloop=
+
+	if [ -n "${opt}" ]
+	then
+		local fzf_opt="-${opt}"
+	fi
 
 	set_term_title
+	play_tonal_sound high "-${opt}" &
 
 	find -L "${dpath_music}" -type f | \
 	cut -d '/' -f "$(print_cut_field_selection_number)" | sed '/^$/d' | sort -r | \
@@ -166,7 +172,7 @@ show_fpath_filter()
 		--color fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:12,header:11,prompt:7,info:8,query:15 \
 		--prompt '> ' \
 		--algo v1 \
-		--query "${str}" \
+		--query "${fzf_query}" \
 		--literal \
 		--cycle \
 		--tac \
@@ -175,7 +181,7 @@ show_fpath_filter()
 		--bind 'enter:select-all+accept' \
 		--bind 'double-click:select-all+accept' \
 		--bind 'change:first' \
-		--bind 'backward-eof:execute-silent(pimp app-tone clsh $opt_q)' \
+		--bind "backward-eof:execute-silent(pimp app-tone clsh ${fzf_opt})" \
 		--bind 'alt-bspace:clear-query' \
 		--bind 'home:first' \
 		--bind 'end:last' \
@@ -216,7 +222,7 @@ show_fpath_filter()
 
 			if [ ${i} -eq 200 ]  #  if 200th playlist item is processed (indicating playback delay).
 			then
-				play_tonal_sound ffpi "${opt_q}"
+				play_tonal_sound ffpi "${fzf_opt}"
 			fi
 
 			#  create absolute path and add to playlist file:
@@ -237,16 +243,16 @@ show_fpath_filter()
 			return 100
 			;;
 		30)
-			play_music "${opt_q}"
+			play_music "${fzf_opt}"
 			return 100
 			;;
 		*)
-			int_modtime_plist_postloop="$(get_file_modtime "${fpath_playlist}")"
+			int_modtime_plist_pstloop="$(get_file_modtime "${fpath_playlist}")"
 
-			if [ "${int_modtime_plist_postloop}" != "${int_modtime_plist_preloop}" ]
+			if [ "${int_modtime_plist_pstloop}" != "${int_modtime_plist_preloop}" ]
 			then
 				remove_playback_position_cache
-				play_music -s "${opt_q}"
+				play_music -s "${fzf_opt}"
 				return 100
 			else
 				return 0
@@ -274,6 +280,13 @@ play_music()
 
 	local sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
+	if [ "${PIMP_DEBUG}" = 1 ]
+	then
+		printf 'func play_music opt: %s<\n' "${opt}"
+		printf 'func play_music str: %s<\n' "${str}"
+		printf 'func play_music sys: %s<\n' "${sys}"
+	fi
+
 	local dpath_cache="${PIMP_DPATH_CACHE}"
 	local dpath_conf="${PIMP_DPATH_CONF}"
 	local dpath_cache_playback_position="${PIMP_DPATH_CACHE_PLAY_POS}"
@@ -286,7 +299,11 @@ play_music()
 	#  terminate speech and respective tonal sound upon music selection.
 
 	pkill -x espeak &
-	clear
+
+	if ! [ "${PIMP_DEBUG}" = 1 ]
+	then
+		clear
+	fi
 
 	if opt d "${opt}" && [ -n "${str}" ]
 	then
@@ -322,7 +339,7 @@ play_music()
 
 		if opt s "${opt}"
 		then
-			#  shuffle cached playlist file content.
+			#  shuffle playlist file content.
 			sort -R "${fpath_playlist}" -o "${fpath_playlist}"
 		fi
 
@@ -336,13 +353,8 @@ play_music()
 					"$(tput bold)" "$(tput sgr0)"
 				;;
 		esac
-		
-		if opt q "${opt}"
-		then
-			continue
-		else
-			play_tonal_sound play
-		fi
+
+		play_tonal_sound play "-${opt}"
 
 		mpv \
 			--af-add=scaletempo=speed=both \
@@ -486,7 +498,13 @@ play_tonal_sound()
 		sed 's/[[:space:]]*$//g'
 	)"
 
-	if opt q "${opt}"
+	if [ "${PIMP_DEBUG}" = 1 ]
+	then
+		printf 'func play_tonal_sound opt: %s<\n' "${opt}"
+		printf 'func play_tonal_sound str: %s<\n' "${str}"
+	fi
+
+	if opt Q "${opt}"
 	then
 		return 0
 	fi
@@ -520,6 +538,11 @@ play_tonal_sound()
 			;;
 		play)
 			#  item (selected for music playback)
+			if opt b "${opt}"
+			then
+				return 0
+			fi
+
 			play -qn synth sine 1000 trim 0 0.05 gain -30
 			;;
 	esac
@@ -547,7 +570,7 @@ play_speech()
 
 	local sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
-	if opt q "${opt}"
+	if opt Q "${opt}"
 	then
 		return 0
 	fi
@@ -565,6 +588,8 @@ play_speech()
 			printf '%s' "${str}" | sed 's/\//, /g' | espeak -a 100 -s 235 || return 1
 			;;
 	esac
+
+	return 0
 }
 
 print_cut_field_selection_number()
@@ -572,7 +597,7 @@ print_cut_field_selection_number()
 	#  description:
 	#
 	#  posix solution to count number of directory levels in
-	#  ${PIMP_DPATH_MUSIC}; facilitates removal of ${PIMP_DPATH_MUSIC}
+	#  $PIMP_DPATH_MUSIC; facilitates removal of $PIMP_DPATH_MUSIC
 	#  from filter lists via `cut`.
 
 	local dpath_music="${PIMP_DPATH_MUSIC}"
@@ -681,9 +706,9 @@ print_usage()
 			print int(min+rand()*(max-min+1))
 		}')
 		
-		case "$int" in
+		case "${int}" in
 			0)
-				printf "Show that stereo who's boss."
+				printf 'Show that stereo who'\''s boss.'
 				;;
 			1)
 				printf 'Whatsup, playa!?'
@@ -704,35 +729,36 @@ print_usage()
 $(print_funny_usage_header)
 
 usage:
-  pimp [d|dir] [-q] [query]
-  pimp [f|file] [-q] [query]
-  pimp [p|play|slap] [-dqs] [path]
+  pimp [d|dir] [-Q] [query]
+  pimp [f|file] [-Q] [query]
+  pimp [p|play|slap] [-bdQs] [path]
 
   pimp [app-rmpp]
-  pimp [app-speech] [-q] text
-  pimp [app-tone] [-q] clsh|ffpi|ftbk|ftgo|high|play
+  pimp [app-speech] [-Q] text
+  pimp [app-tone] [-Q] clsh|ffpi|ftbk|ftgo|high|play
 
 commands:
-  d, dir [-q] [query]            List directories in fuzzy finder.
-  f, file [-q] [query]           List files in fuzzy finder.
-  p, play, slap [-dqs] [path]    Resume music playback.
+  d, dir [-Q] [query]             List directories in fuzzy finder.
+  f, file [-Q] [query]            List files in fuzzy finder.
+  p, play, slap [-bdQs] [path]    Resume music playback.
 
 commands (not intended for user invocation):
   app-rmpp                                       Delete playback position cache.
-  app-speech [-q] text                           Play text-to-speech.
-  app-tone [-q] clsh|ffpi|ftbk|ftgo|high|play    Play tonal sound.
+  app-speech [-Q] text                           Play text-to-speech.
+  app-tone [-Q] clsh|ffpi|ftbk|ftgo|high|play    Play tonal sound.
 
 options:
+  -b           Suppress initial "play" tonal sound only once.
   -d [path]    Play relative directory path (case-sensitive).
-  -q           Suppress all auditory navigation.
-  -s           Shuffle cached playlist file content.
+  -Q           Suppress all auditory navigation.
+  -s           Shuffle playlist file content.
 
 examples:
   pimp slap                 Resume the slap (music playback).
   pimp d deep house         Search for directory containing "deep house" string.
   pimp f mixes/ fm 199      Search for files containing "fm" and "199" with
-                            paths that match the "mixes/" string.
   pimp p -d hip hop/lofi    Play "hip hop/lofi" path without using fuzzy finder.
+                            paths that match the "mixes/" string.
 EOF
 
 	return 1
@@ -750,7 +776,7 @@ remove_playback_position_cache()
 	then
 		return 0
 	else
-		printf 'pimp: playback cache files stored within "%s" could not be deleted.\n' \
+		printf 'pimp: playback position cache stored within "%s" could not be deleted.\n' \
 			"${dpath_cache_playback_position}" >&2
 		return 1
 	fi
@@ -758,7 +784,9 @@ remove_playback_position_cache()
 
 set_term_title()
 {
-	printf "\033]0;pimp\007"  
+	printf '\033]0;pimp\007'
+
+	return 0
 }
 
 if ! check_prerequisites "${prereq_stop}"
@@ -780,6 +808,12 @@ if ! [ -d "${PIMP_DPATH_MUSIC}" ]
 then
 	printf 'pimp: music directory not found: %s\n' "${PIMP_DPATH_MUSIC}" >&2
 	exit 2
+fi
+
+if [ "${PIMP_DEBUG}" = 1 ]
+then
+	printf 'init cmdline: %s<\n' "$*"
+	printf 'init param: %s<\n' "${param}"
 fi
 
 case "$1" in
@@ -825,10 +859,10 @@ case "$1" in
 	*)
 		if [ -f "${PIMP_FPATH_PLAYLIST}" ]
 		then
-			play_music "${param}"
+			play_music "$*"
 		fi
 
-		show_dname_filter "${param}"
+		show_dname_filter "$*"
 		exit $?
 		;;
 esac
