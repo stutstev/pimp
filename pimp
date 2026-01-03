@@ -15,8 +15,8 @@
 #  Source is licensed under MIT License. Refer to LICENSE file for details.
 
 param="$(printf '%s\n' "$*" | awk '{$1=""; print}' | sed 's/^[[:space:]]*//g')"
-prereq_stop="pimp fzf mpv"
-prereq_cont="espeak sox"
+depends_dire="pimp fzf mpv"
+depends_optional="espeak sox"
 
 PIMP_DEBUG="${PIMP_DEBUG-0}"
 PIMP_DPATH_CACHE="${PIMP_DPATH_CACHE-"${HOME}/.cache/pimp"}"
@@ -27,14 +27,14 @@ PIMP_FPATH_PLAYLIST="${PIMP_FPATH_PLAYLIST-"${PIMP_DPATH_CACHE}/playlist"}"
 
 export PIMP_PROCESS=  #  exported environment variable that provides users with
                       #  the programmatic ability to host pimp-exclusive mpv
-                      #  lua customizations via ${HOME}/.config/mpv/scripts.
+                      #  lua customizations via $HOME/.config/mpv/scripts.
 
-opt()
+_opt_exist()
 {
-	#  synopsis:  detects parameter options passed alongside a function call.
+	#  synopsis:  confirms existence of parameter option passed from function call.
 	#
 	#  usage:
-	#    opt a "${string}"
+	#    _opt_exist a "${string}"
 	#        ^
 	#        |
 	#        |
@@ -50,7 +50,7 @@ opt()
 	fi
 }
 
-show_dname_filter()
+display_dname_fzf()
 {
 	#  synopsis:  shows recursive and interactive list of directories to play.
 
@@ -68,7 +68,7 @@ show_dname_filter()
 		sed 's/[[:space:]]*$//g'
 	)"
 
-	if opt b "${opt}"
+	if _opt_exist b "${opt}"
 	then
 		#  omits opt to resume "play" tonal sound at start of music playback.
 		local opt="$(printf '%s' "${opt}" | tr -d b)"
@@ -83,7 +83,7 @@ show_dname_filter()
 		local fzf_opt="-${opt}"
 	fi
 
-	set_term_title
+	set_terminal_title
 
 	find -L "${dpath_music}" -type d | \
 	cut -d '/' -f "$(print_cut_field_selection_number)" | sed '/^$/d' | sed '1i\
@@ -111,16 +111,16 @@ show_dname_filter()
 		--bind 'end:last' \
 		--bind 'esc:abort' \
 		--bind 'tab:abort' \
-		--bind "insert:execute-silent(pimp app-tone ftgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ftbk ${fzf_opt})" \
+		--bind "insert:execute-silent(pimp app-tone ffgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ffbk ${fzf_opt})" \
 		--bind 'alt-q:abort' \
 		--bind 'ctrl-q:abort' \
-		--bind "f5:execute-silent(pimp app-tone ftgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ftbk ${fzf_opt})" \
+		--bind "f5:execute-silent(pimp app-tone ffgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ffbk ${fzf_opt})" \
 		--bind "f6:execute(pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
 		--bind "*:execute(pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
 		--bind "f7:reload(pimp dir ${fzf_opt})+abort"
 }
 
-show_fpath_filter()
+display_fpath_fzf()
 {
 	#  synopsis:  shows recursive and interactive list of files to play.
 
@@ -138,7 +138,7 @@ show_fpath_filter()
 		sed 's/[[:space:]]*$//g'
 	)"
 
-	if opt b "${opt}"
+	if _opt_exist b "${opt}"
 	then
 		#  omits opt to resume "play" tonal sound at start of music playback.
 		local opt="$(printf '%s' "${opt}" | tr -d b)"
@@ -160,7 +160,7 @@ show_fpath_filter()
 		local fzf_opt="-${opt}"
 	fi
 
-	set_term_title
+	set_terminal_title
 	play_tonal_sound high "-${opt}" &
 
 	find -L "${dpath_music}" -type f | \
@@ -260,6 +260,70 @@ show_fpath_filter()
 	esac
 }
 
+get_file_modtime()
+{
+	#  synopsis:  gets unix epoch modification timestamp of a file.
+
+	local f="$1"
+	local modtime=
+	local sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
+
+	if ! [ -f "${f}" ]
+	then
+		printf 0
+		return 1
+	fi
+
+	case "${sys}" in
+		linux)
+			modtime="$(stat -c %Y "${f}")"
+			printf '%s' "${modtime}"
+			;;
+		openbsd|darwin|*)
+			modtime="$(stat -f %m "${f}")"
+			printf '%s' "${modtime}"
+			;;
+	esac
+
+	return 0
+}
+
+make_app_file_structure()
+{
+	#  synopsis:  creates application file structure.
+
+	local dpath_cache="${PIMP_DPATH_CACHE}"
+	local dpath_conf="${PIMP_DPATH_CONF}"
+	local dpath_cache_playback_position="${PIMP_DPATH_CACHE_PLAY_POS}"
+
+	if ! [ -d "${dpath_cache}" ]
+	then
+		if ! mkdir -p "${dpath_cache}"
+		then
+			printf 'pimp: unable to create cache directory: %s\n' "${dpath_cache}" >&2
+			return 2
+		fi
+	fi
+
+	if ! [ -d "${dpath_conf}" ]
+	then
+		if ! mkdir -p "${dpath_conf}"
+		then
+			printf 'pimp: unable to create configuration directory: %s\n' "${dpath_conf}" >&2
+		fi
+	fi
+
+	if ! [ -d "${dpath_cache_playback_position}" ]
+	then
+		if ! mkdir -p "${dpath_cache_playback_position}"
+		then
+			printf 'pimp: unable to create playback position directory: %s\n' "${dpath_cache_playback_position}" >&2
+		fi
+	fi
+
+	return 0
+}
+
 play_music()
 {
 	#  synopsis:  plays contents of generated playlist file.
@@ -305,7 +369,7 @@ play_music()
 		clear
 	fi
 
-	if opt d "${opt}" && [ -n "${str}" ]
+	if _opt_exist d "${opt}" && [ -n "${str}" ]
 	then
 		#  create playlist file using dname_filter selection.
 
@@ -337,7 +401,7 @@ play_music()
 	if [ -f "${fpath_playlist}" ]
 	then
 
-		if opt s "${opt}"
+		if _opt_exist s "${opt}"
 		then
 			#  shuffle playlist file content.
 			sort -R "${fpath_playlist}" -o "${fpath_playlist}"
@@ -379,101 +443,49 @@ play_music()
 			--watch-later-options=volume,speed,pause,loop-file,start \
 			--watch-later-options-remove=mute,ab-loop
 
-		set_term_title
+		set_terminal_title
 	else
 		printf 'pimp: playlist file not found: %s\n' "${fpath_playlist}" >&2
 		return 2
 	fi
 }
 
-check_prerequisites()
+play_speech()
 {
-	#  synopsis:  ensures program prerequisites exist in ${PATH}.
+	#  synopsis:  plays speech for auditory navigation.
 
-	local err=0
-	local i=               #   last program will not process without
-	local programs="$* -"  # < placeholder at end of string.
+	local opt="$(
+		printf '%s' "$*"          | \
+		grep -o '\-[a-zA-Z0-9]*'  | \
+		sed 's/-//g'              | \
+		tr -d '\n'
+	)"
 
-	printf '%s' "${programs}" | tr '[:space:]' '\n' | ( \
+	local str="$(
+		printf '%s' "$*"          | \
+		sed 's/\-[a-zA-Z0-9]*//g' | \
+		sed 's/^[[:space:]]*//g'  | \
+		sed 's/[[:space:]]*$//g'
+	)"
 
-		while read -r i
-		do
-			if ! command -v "${i}" >/dev/null 2>&1
-			then
-				if [ ${err} -eq 0 ]
-				then
-					printf 'pimp: prerequisite programs not found in $PATH:\n' >&2
-					err=1
-				fi
-				
-				printf '%s\n' " - ${i}" >&2
-			fi
-		done
-
-		return "${err}"
-	)
-
-	return $?
-}
-
-create_program_dirs()
-{
-	#  synopsis:  create program directories.
-
-	local dpath_cache="${PIMP_DPATH_CACHE}"
-	local dpath_conf="${PIMP_DPATH_CONF}"
-	local dpath_cache_playback_position="${PIMP_DPATH_CACHE_PLAY_POS}"
-
-	if ! [ -d "${dpath_cache}" ]
-	then
-		if ! mkdir -p "${dpath_cache}"
-		then
-			printf 'pimp: unable to create cache directory: %s\n' "${dpath_cache}" >&2
-			return 2
-		fi
-	fi
-
-	if ! [ -d "${dpath_conf}" ]
-	then
-		if ! mkdir -p "${dpath_conf}"
-		then
-			printf 'pimp: unable to create config directory: %s\n' "${dpath_conf}" >&2
-		fi
-	fi
-
-	if ! [ -d "${dpath_cache_playback_position}" ]
-	then
-		if ! mkdir -p "${dpath_cache_playback_position}"
-		then
-			printf 'pimp: unable to create playback position directory: %s\n' "${dpath_cache_playback_position}" >&2
-		fi
-	fi
-
-	return 0
-}
-
-get_file_modtime()
-{
-	#  synopsis:  gets unix epoch modification timestamp of a file.
-
-	local f="$1"
-	local modtime=
 	local sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
-	if ! [ -f "${f}" ]
+	if _opt_exist Q "${opt}"
 	then
-		printf 0
+		return 0
+	fi
+
+	if ! command -v espeak >/dev/null 2>&1
+	then
 		return 1
 	fi
 
 	case "${sys}" in
 		linux)
-			modtime="$(stat -c %Y "${f}")"
-			printf '%s' "${modtime}"
+			printf '%s' "${str}" | sed 's/\//, /g' | espeak -a 100 -s 300 || return 1
 			;;
-		openbsd|darwin|*)
-			modtime="$(stat -f %m "${f}")"
-			printf '%s' "${modtime}"
+		*)
+			printf '%s' "${str}" | sed 's/\//, /g' | espeak -a 100 -s 235 || return 1
 			;;
 	esac
 
@@ -504,7 +516,7 @@ play_tonal_sound()
 		printf 'func play_tonal_sound str: %s<\n' "${str}"
 	fi
 
-	if opt Q "${opt}"
+	if _opt_exist Q "${opt}"
 	then
 		return 0
 	fi
@@ -520,16 +532,16 @@ play_tonal_sound()
 			play -qn synth sine 0200 trim 0 0.05 gain -20
 			;;
 		ffpi)
-			#  fpath_filter playlist initialization
+			#  display_fpath_fzf playlist initialization
 			play -qn synth sine 0500 trim 0 0.05 gain -20
 			;;
-		ftbk)
-			#  filter (return to dname_filter)
+		ffbk)
+			#  fuzzy finder (return to display_dname_fzf)
 			play -qn synth sine 1500 trim 0 0.05 gain -30
 			play -qn synth sine 1400 trim 0 0.05 gain -30
 			;;
-		ftgo)
-			#  filter (change to fpath_filter)
+		ffgo)
+			#  fuzzy finder (change to display_fpath_fzf)
 			play -qn synth sine 1500 trim 0 0.05 gain -30
 			;;
 		high)
@@ -538,54 +550,12 @@ play_tonal_sound()
 			;;
 		play)
 			#  item (selected for music playback)
-			if opt b "${opt}"
+			if _opt_exist b "${opt}"
 			then
 				return 0
 			fi
 
 			play -qn synth sine 1000 trim 0 0.05 gain -30
-			;;
-	esac
-
-	return 0
-}
-
-play_speech()
-{
-	#  synopsis:  plays speech for auditory navigation.
-
-	local opt="$(
-		printf '%s' "$*"          | \
-		grep -o '\-[a-zA-Z0-9]*'  | \
-		sed 's/-//g'              | \
-		tr -d '\n'
-	)"
-
-	local str="$(
-		printf '%s' "$*"          | \
-		sed 's/\-[a-zA-Z0-9]*//g' | \
-		sed 's/^[[:space:]]*//g'  | \
-		sed 's/[[:space:]]*$//g'
-	)"
-
-	local sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
-
-	if opt Q "${opt}"
-	then
-		return 0
-	fi
-
-	if ! command -v espeak >/dev/null 2>&1
-	then
-		return 1
-	fi
-
-	case "${sys}" in
-		linux)
-			printf '%s' "${str}" | sed 's/\//, /g' | espeak -a 100 -s 300 || return 1
-			;;
-		*)
-			printf '%s' "${str}" | sed 's/\//, /g' | espeak -a 100 -s 235 || return 1
 			;;
 	esac
 
@@ -598,7 +568,7 @@ print_cut_field_selection_number()
 	#
 	#  posix solution to count number of directory levels in
 	#  $PIMP_DPATH_MUSIC; facilitates removal of $PIMP_DPATH_MUSIC
-	#  from filter lists via `cut`.
+	#  from fzf lists via `cut`.
 
 	local dpath_music="${PIMP_DPATH_MUSIC}"
 	local int_dpath_sections="$(( $(printf '%s' "${dpath_music}" | sed 's/\// /g' | wc -w) + 2 ))"
@@ -735,7 +705,7 @@ usage:
 
   pimp [app-rmpp]
   pimp [app-speech] [-Q] text
-  pimp [app-tone] [-Q] clsh|ffpi|ftbk|ftgo|high|play
+  pimp [app-tone] [-Q] clsh|ffpi|ffbk|ffgo|high|play
 
 commands:
   d, dir [-Q] [query]             List directories in fuzzy finder.
@@ -745,7 +715,7 @@ commands:
 commands (not intended for user invocation):
   app-rmpp                                       Delete playback position cache.
   app-speech [-Q] text                           Play text-to-speech.
-  app-tone [-Q] clsh|ffpi|ftbk|ftgo|high|play    Play tonal sound.
+  app-tone [-Q] clsh|ffpi|ffbk|ffgo|high|play    Play tonal sound.
 
 options:
   -b           Suppress initial "play" tonal sound only once.
@@ -782,24 +752,54 @@ remove_playback_position_cache()
 	fi
 }
 
-set_term_title()
+set_terminal_title()
 {
 	printf '\033]0;pimp\007'
 
 	return 0
 }
 
-if ! check_prerequisites "${prereq_stop}"
+verify_dependencies()
+{
+	#  synopsis:  ensures program dependencies exist in $PATH.
+
+	local err=0
+	local i=               #     last program will not process without
+	local programs="$* -"  #  <- placeholder at end of string.
+
+	printf '%s' "${programs}" | tr '[:space:]' '\n' | ( \
+
+		while read -r i
+		do
+			if ! command -v "${i}" >/dev/null 2>&1
+			then
+				if [ ${err} -eq 0 ]
+				then
+					printf 'pimp: prerequisite programs not found in $PATH:\n' >&2
+					err=1
+				fi
+
+				printf '%s\n' " - ${i}" >&2
+			fi
+		done
+
+		return "${err}"
+	)
+
+	return $?
+}
+
+if ! verify_dependencies "${depends_dire}"
 then
 	exit 2
 fi
 
-if ! check_prerequisites "${prereq_cont}"
+if ! verify_dependencies "${depends_optional}"
 then
 	printf '\npimp: continuing...\n' >&2
 fi
 
-if ! create_program_dirs
+if ! make_app_file_structure
 then
 	exit 2
 fi
@@ -818,13 +818,13 @@ fi
 
 case "$1" in
 	d|dir)
-		show_dname_filter "${param}"
+		display_dname_fzf "${param}"
 		exit $?
 		;;
 	f|file)
 		while :
 		do
-			show_fpath_filter "${param}"
+			display_fpath_fzf "${param}"
 
 			case "$?" in
 				100)
@@ -862,7 +862,7 @@ case "$1" in
 			play_music "$*"
 		fi
 
-		show_dname_filter "$*"
+		display_dname_fzf "$*"
 		exit $?
 		;;
 esac
