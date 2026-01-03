@@ -227,7 +227,8 @@ display_fpath_fzf()
 
 			#  create absolute path and add to playlist file:
 			printf '%s/%s\n' "${dpath_music}" "${f}" >> "${fpath_playlist}"
-			i=$((${i}+1))
+
+			i=$((i + 1))
 
 			continue
 		done
