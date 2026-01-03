@@ -75,7 +75,7 @@ display_dname_fzf()
 	fi
 
 	local dpath_music="${PIMP_DPATH_MUSIC}"
-	local fzf_out=
+	local fzf_opt=
 	local fzf_query="${str}"
 
 	if [ -n "${opt}" ]
@@ -775,7 +775,7 @@ verify_dependencies()
 			then
 				if [ ${err} -eq 0 ]
 				then
-					printf 'pimp: prerequisite programs not found in $PATH:\n' >&2
+					printf 'pimp: prerequisite programs not found:\n' >&2
 					err=1
 				fi
 
