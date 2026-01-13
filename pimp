@@ -111,23 +111,22 @@ display_dname_fzf()
 		--cycle \
 		--tac \
 		--layout reverse \
-		--preview "pimp app-speech ${fzf_opt} {} && pimp app-tone high ${fzf_opt}" \
+		--preview "pkill -x espeak; pimp app-speech ${fzf_opt} {} && pimp app-tone high ${fzf_opt}" \
 		--preview-window 0% \
-		--bind "enter:execute(pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
-		--bind "double-click:execute(pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
+		--bind "enter:execute(pkill -x espeak; pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
+		--bind "double-click:execute(pkill -x espeak; pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
+		--bind "insert:execute-silent(pkill -x espeak; pimp app-tone ffgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ffbk ${fzf_opt})" \
+		--bind "f5:execute-silent(pkill -x espeak; pimp app-tone ffgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ffbk ${fzf_opt})" \
+		--bind "f6:execute(pkill -x espeak; pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
+		--bind "*:execute(pkill -x espeak; pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
 		--bind 'change:first' \
 		--bind 'bspace:clear-query' \
 		--bind 'home:first' \
 		--bind 'end:last' \
 		--bind 'esc:abort' \
 		--bind 'tab:abort' \
-		--bind "insert:execute-silent(pimp app-tone ffgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ffbk ${fzf_opt})" \
 		--bind 'alt-q:abort' \
-		--bind 'ctrl-q:abort' \
-		--bind "f5:execute-silent(pimp app-tone ffgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ffbk ${fzf_opt})" \
-		--bind "f6:execute(pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
-		--bind "*:execute(pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
-		--bind "f7:reload(pimp dir ${fzf_opt})+abort"
+		--bind 'ctrl-q:abort'
 }
 
 display_fpath_fzf()
@@ -188,13 +187,7 @@ display_fpath_fzf()
 		--tac \
 		--header-lines 0 \
 		--layout reverse \
-		--bind 'enter:select-all+accept' \
-		--bind 'double-click:select-all+accept' \
-		--bind 'change:first' \
 		--bind "backward-eof:execute-silent(pimp app-tone clsh ${fzf_opt})" \
-		--bind 'alt-bspace:clear-query' \
-		--bind 'home:first' \
-		--bind 'end:last' \
 		--bind "esc:become(printf '%s\n'    ${cmd_pimp_quit})+abort" \
 		--bind "tab:become(printf '%s\n'    ${cmd_pimp_quit})+abort" \
 		--bind "insert:become(printf '%s\n' ${cmd_pimp_quit})+abort" \
@@ -202,8 +195,14 @@ display_fpath_fzf()
 		--bind "ctrl-q:become(printf '%s\n' ${cmd_pimp_quit})+abort" \
 		--bind "f5:become(printf '%s\n'     ${cmd_pimp_quit})+abort" \
 		--bind "f6:become(printf '%s\n'     ${cmd_pimp_resume_pback})+abort" \
+		--bind "f7:become(printf '%s\n'     ${cmd_pimp_refresh})+abort" \
 		--bind "*:become(printf '%s\n'      ${cmd_pimp_resume_pback})+abort" \
-		--bind "f7:become(printf '%s\n'     ${cmd_pimp_refresh})+abort" | ( \
+		--bind 'enter:select-all+accept' \
+		--bind 'double-click:select-all+accept' \
+		--bind 'change:first' \
+		--bind 'alt-bspace:clear-query' \
+		--bind 'home:first' \
+		--bind 'end:last' | ( \
 
 		#  until `fzf` intuitively enables the processing of multi-line
 		#  output, a while-read subshell, along with case and return
@@ -371,10 +370,6 @@ play_music()
 	local fpath_pback_pos_asave_script="${dpath_cache}/autosave.lua"
 	local fpath_plist="${PIMP_FPATH_PLIST}"
 
-	#  terminate speech and respective tonal sound upon music selection.
-
-	pkill -x espeak &
-
 	if ! [ "${PIMP_DEBUG}" = 1 ]
 	then
 		clear
@@ -540,7 +535,7 @@ play_tonal_sound()
 	case "${str}" in
 		clsh)
 			#  text (search box cleared)
-			play -qn synth sine 0200 trim 0 0.05 gain -20
+			play -qn synth sine 0200 trim 0 0.05 gain -20 &
 			;;
 		ffpi)
 			#  display_fpath_fzf playlist initialization
