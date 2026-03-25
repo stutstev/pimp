@@ -487,7 +487,7 @@ play_speech()
 	fi
 
 	case "${sys}" in
-		linux)
+		linux|darwin)
 			printf '%s' "${str}" | sed 's/\//, /g' | espeak -a 100 -s 300 || return 1
 			;;
 		*)
