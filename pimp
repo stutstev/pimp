@@ -14,18 +14,18 @@
 #  Copyright (c) 2022-2026 Steven Peguero (stevenpeguero.com)
 #  Source is licensed under MIT License. Refer to LICENSE file for details.
 
-param="$(printf '%s\n' "$*" | awk '{$1=""; print}' | sed 's/^[[:space:]]*//g')"
 depends_dire="pimp fzf mpv"
 depends_optional="espeak sox"
+param="$(printf '%s\n' "$*" | awk '{$1=""; print}' | sed 's/^[[:space:]]*//g')"
 
 PIMP_DEBUG="${PIMP_DEBUG-0}"
 PIMP_DPATH_CACHE="${PIMP_DPATH_CACHE-"${HOME}/.cache/pimp"}"
-PIMP_DPATH_CONF="${PIMP_DPATH_CONF-"${HOME}/.config/pimp"}"
+PIMP_DPATH_CONFG="${PIMP_DPATH_CONFG-"${HOME}/.config/pimp"}"
 PIMP_DPATH_MUSIC="${PIMP_DPATH_MUSIC-"${HOME}/Music"}"
 PIMP_DPATH_SHARE="${PIMP_DPATH_SHARE-"${HOME}/.local/share/pimp"}"
 PIMP_DPATH_STATE="${PIMP_DPATH_STATE-"${HOME}/.local/state/pimp"}"
-PIMP_DPATH_STATE_PBACK_POS="${PIMP_DPATH_STATE}/playback"
-PIMP_FPATH_PLIST="${PIMP_FPATH_PLIST-"${PIMP_DPATH_STATE}/playlist"}"
+PIMP_DPATH_STATE_PBACK="${PIMP_DPATH_STATE}/playback"
+PIMP_FPATH_STATE_PLIST="${PIMP_DPATH_STATE}/playlist"
 
 export PIMP_SCRIPT=  #  environment variable mpv lua scripts can make use of to enforce
                      #  pimp-exclusivity. to enable this, use this at beginning of said scripts:
@@ -159,11 +159,11 @@ display_fpath_fzf()
 	local cmd_pimp_refresh='20_cmd_filter_refresh'
 	local cmd_pimp_resume_pback='30_cmd_resume_pback'
 	local dpath_music="${PIMP_DPATH_MUSIC}"
-	local fpath_plist="${PIMP_FPATH_PLIST}"
+	local fpath_state_plist="${PIMP_FPATH_STATE_PLIST}"
 	local fzf_opt=
 	local fzf_query="${str}"
 	local i=0
-	local int_modtime_plist_preloop="$(get_file_modtime "${fpath_plist}")"
+	local int_modtime_plist_preloop="$(get_file_modtime "${fpath_state_plist}")"
 	local int_modtime_plist_pstloop=
 
 	if [ -n "${opt}" ]
@@ -226,7 +226,7 @@ display_fpath_fzf()
 						return 30
 						;;
 					*)
-						rm -f "${fpath_plist}"
+						rm -f "${fpath_state_plist}"
 						;;
 				esac
 			fi
@@ -237,7 +237,7 @@ display_fpath_fzf()
 			fi
 
 			#  create absolute path and add to playlist file:
-			printf '%s/%s\n' "${dpath_music}" "${f}" >> "${fpath_plist}"
+			printf '%s/%s\n' "${dpath_music}" "${f}" >> "${fpath_state_plist}"
 
 			local i=$((i + 1))
 
@@ -259,7 +259,7 @@ display_fpath_fzf()
 			return 100
 			;;
 		*)
-			local int_modtime_plist_pstloop="$(get_file_modtime "${fpath_plist}")"
+			local int_modtime_plist_pstloop="$(get_file_modtime "${fpath_state_plist}")"
 
 			if [ "${int_modtime_plist_pstloop}" != "${int_modtime_plist_preloop}" ]
 			then
@@ -304,17 +304,25 @@ make_app_file_structure()
 {
 	#  synopsis:  creates application file structure.
 
-	local dpath_conf="${PIMP_DPATH_CONF}"
+	local dpath_cache="${PIMP_DPATH_CACHE}"
+	local dpath_confg="${PIMP_DPATH_CONFG}"
 	local dpath_share="${PIMP_DPATH_SHARE}"
 	local dpath_state="${PIMP_DPATH_STATE}"
-	local dpath_state_pback_pos="${PIMP_DPATH_STATE_PBACK_POS}"
+	local dpath_state_pback="${PIMP_DPATH_STATE_PBACK}"
 
-	if ! [ -d "${dpath_state}" ]
+	if ! [ -d "${dpath_cache}" ]
 	then
-		if ! mkdir -p "${dpath_state}"
+		if ! mkdir -p "${dpath_cache}"
 		then
-			printf 'pimp: unable to create state directory: %s\n' "${dpath_state}" >&2
-			return 2
+			printf 'pimp: unable to create cache directory: %s\n' "${dpath_cache}" >&2
+		fi
+	fi
+
+	if ! [ -d "${dpath_confg}" ]
+	then
+		if ! mkdir -p "${dpath_confg}"
+		then
+			printf 'pimp: unable to create configuration directory: %s\n' "${dpath_confg}" >&2
 		fi
 	fi
 
@@ -327,19 +335,20 @@ make_app_file_structure()
 		fi
 	fi
 
-	if ! [ -d "${dpath_conf}" ]
+	if ! [ -d "${dpath_state}" ]
 	then
-		if ! mkdir -p "${dpath_conf}"
+		if ! mkdir -p "${dpath_state}"
 		then
-			printf 'pimp: unable to create configuration directory: %s\n' "${dpath_conf}" >&2
+			printf 'pimp: unable to create state directory: %s\n' "${dpath_state}" >&2
+			return 2
 		fi
 	fi
 
-	if ! [ -d "${dpath_state_pback_pos}" ]
+	if ! [ -d "${dpath_state_pback}" ]
 	then
-		if ! mkdir -p "${dpath_state_pback_pos}"
+		if ! mkdir -p "${dpath_state_pback}"
 		then
-			printf 'pimp: unable to create playback position directory: %s\n' "${dpath_state_pback_pos}" >&2
+			printf 'pimp: unable to create playback position directory: %s\n' "${dpath_state_pback}" >&2
 		fi
 	fi
 
@@ -373,16 +382,16 @@ play_music()
 		printf 'func play_music sys: %s<\n' "${sys}"
 	fi
 
-	local dpath_conf="${PIMP_DPATH_CONF}"
+	local dpath_confg="${PIMP_DPATH_CONFG}"
 	local dpath_dname_fzf_selection=
 	local dpath_music="${PIMP_DPATH_MUSIC}"
-	local dpath_state="${PIMP_DPATH_STATE}"
-	local dpath_state_pback_pos="${PIMP_DPATH_STATE_PBACK_POS}"
 	local dpath_share="${PIMP_DPATH_SHARE}"
+	local dpath_state="${PIMP_DPATH_STATE}"
+	local dpath_state_pback="${PIMP_DPATH_STATE_PBACK}"
 
-	local fpath_pback_input_conf="${dpath_conf}/input.conf"
-	local fpath_pback_pos_asave_script="${dpath_share}/autosave.lua"
-	local fpath_plist="${PIMP_FPATH_PLIST}"
+	local fpath_confg_pback_input="${dpath_confg}/input.conf"
+	local fpath_share_script_pback_autosave="${dpath_share}/autosave.lua"
+	local fpath_state_plist="${PIMP_FPATH_STATE_PLIST}"
 
 	if ! [ "${PIMP_DEBUG}" = 1 ]
 	then
@@ -396,35 +405,35 @@ play_music()
 		if [ -d "${dpath_music}/${str}" ]
 		then
 			local dpath_dname_fzf_selection="$(realpath "${dpath_music}/${str}")"
-			find -L "${dpath_dname_fzf_selection}" -type f > "${fpath_plist}"
+			find -L "${dpath_dname_fzf_selection}" -type f > "${fpath_state_plist}"
 		else
 			return 1
 		fi
 	fi
 
-	if ! [ -f "${fpath_pback_pos_asave_script}" ]
+	if ! [ -f "${fpath_share_script_pback_autosave}" ]
 	then
-		if ! print_playback_position_autosave_script > "${fpath_pback_pos_asave_script}"
+		if ! print_playback_position_autosave_script > "${fpath_share_script_pback_autosave}"
 		then
-			printf 'pimp: unable to create playback position auto-save script: %s\n' "${fpath_pback_pos_asave_script}" >&2
+			printf 'pimp: unable to create playback position auto-save script: %s\n' "${fpath_share_script_pback_autosave}" >&2
 		fi
 	fi
 
-	if ! [ -f "${fpath_pback_input_conf}" ]
+	if ! [ -f "${fpath_confg_pback_input}" ]
 	then
-		if ! touch "${fpath_pback_input_conf}"
+		if ! touch "${fpath_confg_pback_input}"
 		then
-			printf 'pimp: unable to create playback input configuration file: %s\n' "${fpath_pback_input_conf}" >&2
+			printf 'pimp: unable to create playback input configuration file: %s\n' "${fpath_confg_pback_input}" >&2
 		fi
 	fi
 
-	if [ -f "${fpath_plist}" ]
+	if [ -f "${fpath_state_plist}" ]
 	then
 
 		if _opt_exist s "${opt}"
 		then
 			#  shuffle playlist file content.
-			sort -R "${fpath_plist}" -o "${fpath_plist}"
+			sort -R "${fpath_state_plist}" -o "${fpath_state_plist}"
 		fi
 
 		case "${sys}" in
@@ -444,28 +453,28 @@ play_music()
 			--af-add=scaletempo=speed=both \
 			--audio-pitch-correction=no \
 			--display-tags= \
-			--input-conf="${fpath_pback_input_conf}" \
+			--input-conf="${fpath_confg_pback_input}" \
 			--loop-playlist=inf \
 			--msg-level=all=no,term-msg=status,statusline=status,cplayer=error,ffmpeg=fatal,ffmpeg/demuxer=error \
 			--no-audio-display \
 			--no-video \
 			--osd-level=0 \
-			--playlist="${fpath_plist}" \
+			--playlist="${fpath_state_plist}" \
 			--save-position-on-quit \
-			--script="${fpath_pback_pos_asave_script}" \
+			--script="${fpath_share_script_pback_autosave}" \
 			--term-playing-msg="\n\${filename}" \
 			--term-status-msg="\n(\${playlist-pos-1}/\${playlist-count}) \${time-pos} / \${duration} (\${percent-pos}%) (x\${speed}) \${?loop-file==inf:+LF }\${?mute==yes:+M }\${?pause==yes:(Paused)}" \
 			--term-title="pimp -- \${filename}" \
 			--vo=null \
 			--volume-max=100 \
 			--video=no \
-			--watch-later-directory="${dpath_state_pback_pos}" \
+			--watch-later-directory="${dpath_state_pback}" \
 			--watch-later-options=volume,speed,pause,loop-file,start \
 			--watch-later-options-remove=mute,ab-loop
 
 		set_terminal_title
 	else
-		printf 'pimp: playlist file not found: %s\n' "${fpath_plist}" >&2
+		printf 'pimp: playlist file not found: %s\n' "${fpath_state_plist}" >&2
 		return 2
 	fi
 }
@@ -501,7 +510,7 @@ play_speech()
 	fi
 
 	case "${sys}" in
-		linux|darwin)
+		darwin|linux)
 			printf '%s' "${str}" | sed 's/\//, /g' | espeak -a 100 -s 300 || return 1
 			;;
 		*)
@@ -760,14 +769,14 @@ remove_playback_position_data()
 
 	set -u
 
-	local dpath_state_pback_pos="${PIMP_DPATH_STATE_PBACK_POS}"
+	local dpath_state_pback="${PIMP_DPATH_STATE_PBACK}"
 
-	if rm -f "${dpath_state_pback_pos}"/* >/dev/null 2>&1
+	if rm -f "${dpath_state_pback}"/* >/dev/null 2>&1
 	then
 		return 0
 	else
 		printf 'pimp: playback position data stored within "%s" could not be deleted.\n' \
-			"${dpath_state_pback_pos}" >&2
+			"${dpath_state_pback}" >&2
 		return 1
 	fi
 }
@@ -877,7 +886,7 @@ case "$1" in
 		exit $?
 		;;
 	*)
-		if [ -f "${PIMP_FPATH_PLIST}" ]
+		if [ -f "${PIMP_FPATH_STATE_PLIST}" ]
 		then
 			play_music "$*"
 		fi
