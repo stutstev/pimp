@@ -20,10 +20,12 @@ depends_optional="espeak sox"
 
 PIMP_DEBUG="${PIMP_DEBUG-0}"
 PIMP_DPATH_CACHE="${PIMP_DPATH_CACHE-"${HOME}/.cache/pimp"}"
-PIMP_DPATH_CACHE_PBACK_POS="${PIMP_DPATH_CACHE_PBACK_POS-"${PIMP_DPATH_CACHE}/playback"}"
 PIMP_DPATH_CONF="${PIMP_DPATH_CONF-"${HOME}/.config/pimp"}"
 PIMP_DPATH_MUSIC="${PIMP_DPATH_MUSIC-"${HOME}/Music"}"
-PIMP_FPATH_PLIST="${PIMP_FPATH_PLIST-"${PIMP_DPATH_CACHE}/playlist"}"
+PIMP_DPATH_SHARE="${PIMP_DPATH_SHARE-"${HOME}/.local/share/pimp"}"
+PIMP_DPATH_STATE="${PIMP_DPATH_STATE-"${HOME}/.local/state/pimp"}"
+PIMP_DPATH_STATE_PBACK_POS="${PIMP_DPATH_STATE}/playback"
+PIMP_FPATH_PLIST="${PIMP_FPATH_PLIST-"${PIMP_DPATH_STATE}/playlist"}"
 
 export PIMP_SCRIPT=  #  environment variable mpv lua scripts can make use of to enforce
                      #  pimp-exclusivity. to enable this, use this at beginning of said scripts:
@@ -261,7 +263,7 @@ display_fpath_fzf()
 
 			if [ "${int_modtime_plist_pstloop}" != "${int_modtime_plist_preloop}" ]
 			then
-				remove_playback_position_cache
+				remove_playback_position_data
 				play_music -s "${fzf_opt}"
 				return 100
 			else
@@ -302,15 +304,15 @@ make_app_file_structure()
 {
 	#  synopsis:  creates application file structure.
 
-	local dpath_cache="${PIMP_DPATH_CACHE}"
+	local dpath_state="${PIMP_DPATH_STATE}"
+	local dpath_state_pback_pos="${PIMP_DPATH_STATE_PBACK_POS}"
 	local dpath_conf="${PIMP_DPATH_CONF}"
-	local dpath_cache_pback_pos="${PIMP_DPATH_CACHE_PBACK_POS}"
 
-	if ! [ -d "${dpath_cache}" ]
+	if ! [ -d "${dpath_state}" ]
 	then
-		if ! mkdir -p "${dpath_cache}"
+		if ! mkdir -p "${dpath_state}"
 		then
-			printf 'pimp: unable to create cache directory: %s\n' "${dpath_cache}" >&2
+			printf 'pimp: unable to create state directory: %s\n' "${dpath_state}" >&2
 			return 2
 		fi
 	fi
@@ -323,11 +325,11 @@ make_app_file_structure()
 		fi
 	fi
 
-	if ! [ -d "${dpath_cache_pback_pos}" ]
+	if ! [ -d "${dpath_state_pback_pos}" ]
 	then
-		if ! mkdir -p "${dpath_cache_pback_pos}"
+		if ! mkdir -p "${dpath_state_pback_pos}"
 		then
-			printf 'pimp: unable to create playback position directory: %s\n' "${dpath_cache_pback_pos}" >&2
+			printf 'pimp: unable to create playback position directory: %s\n' "${dpath_state_pback_pos}" >&2
 		fi
 	fi
 
@@ -361,13 +363,13 @@ play_music()
 		printf 'func play_music sys: %s<\n' "${sys}"
 	fi
 
-	local dpath_cache="${PIMP_DPATH_CACHE}"
+	local dpath_state="${PIMP_DPATH_STATE}"
 	local dpath_conf="${PIMP_DPATH_CONF}"
-	local dpath_cache_pback_pos="${PIMP_DPATH_CACHE_PBACK_POS}"
+	local dpath_state_pback_pos="${PIMP_DPATH_STATE_PBACK_POS}"
 	local dpath_dname_fzf_selection=
 	local dpath_music="${PIMP_DPATH_MUSIC}"
 	local fpath_pback_input_conf="${dpath_conf}/input.conf"
-	local fpath_pback_pos_asave_script="${dpath_cache}/autosave.lua"
+	local fpath_pback_pos_asave_script="${dpath_state}/autosave.lua"
 	local fpath_plist="${PIMP_FPATH_PLIST}"
 
 	if ! [ "${PIMP_DEBUG}" = 1 ]
@@ -445,7 +447,7 @@ play_music()
 			--vo=null \
 			--volume-max=100 \
 			--video=no \
-			--watch-later-directory="${dpath_cache_pback_pos}" \
+			--watch-later-directory="${dpath_state_pback_pos}" \
 			--watch-later-options=volume,speed,pause,loop-file,start \
 			--watch-later-options-remove=mute,ab-loop
 
@@ -591,12 +593,12 @@ print_playback_position_autosave_script()
 -- ------------
 -- 
 -- periodically saves watch_later data during mpv playback.
--- accounts for periodic cached write synchronization on raspberry pi.
+-- accounts for periodic write synchronization on raspberry pi.
 
 os        = require 'os'
 mp        = require 'mp'
 mp_opt    = require 'mp.options'
-timer_opt = {save_period = 15} -- seconds per mpv watch_later cache save.
+timer_opt = {save_period = 15} -- seconds per mpv watch_later data save.
 raspi     = false
 
 function platform()
@@ -612,7 +614,7 @@ end
 
 function raspi_write_sync()
 
-	-- synchronizes watch_later cache to raspberry pi storage device.
+	-- synchronizes mpv watch_later data to raspberry pi storage device.
 
 	local f = nil
 
@@ -719,7 +721,7 @@ commands:
   p, play, slap [-bdQs] [path]    Resume music playback.
 
 commands (not intended for user invocation):
-  app-rmpp                                       Delete playback position cache.
+  app-rmpp                                       Delete playback position data.
   app-speech [-Q] text                           Play text-to-speech.
   app-tone [-Q] clsh|ffpi|ffbk|ffgo|high|play    Play tonal sound.
 
@@ -740,20 +742,20 @@ EOF
 	return 1
 }
 
-remove_playback_position_cache()
+remove_playback_position_data()
 {
-	#  synopsis:  deletes cached mpv watch_later / playback position data.
+	#  synopsis:  deletes preexisting mpv watch_later / playback position data.
 
 	set -u
 
-	local dpath_cache_pback_pos="${PIMP_DPATH_CACHE_PBACK_POS}"
+	local dpath_state_pback_pos="${PIMP_DPATH_STATE_PBACK_POS}"
 
-	if rm -f "${dpath_cache_pback_pos}"/* >/dev/null 2>&1
+	if rm -f "${dpath_state_pback_pos}"/* >/dev/null 2>&1
 	then
 		return 0
 	else
-		printf 'pimp: playback position cache stored within "%s" could not be deleted.\n' \
-			"${dpath_cache_pback_pos}" >&2
+		printf 'pimp: playback position data stored within "%s" could not be deleted.\n' \
+			"${dpath_state_pback_pos}" >&2
 		return 1
 	fi
 }
@@ -859,7 +861,7 @@ case "$1" in
 		exit $?
 		;;
 	app-rmpp)
-		remove_playback_position_cache
+		remove_playback_position_data
 		exit $?
 		;;
 	*)
