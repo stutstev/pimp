@@ -304,15 +304,25 @@ make_app_file_structure()
 {
 	#  synopsis:  creates application file structure.
 
+	local dpath_conf="${PIMP_DPATH_CONF}"
+	local dpath_share="${PIMP_DPATH_SHARE}"
 	local dpath_state="${PIMP_DPATH_STATE}"
 	local dpath_state_pback_pos="${PIMP_DPATH_STATE_PBACK_POS}"
-	local dpath_conf="${PIMP_DPATH_CONF}"
 
 	if ! [ -d "${dpath_state}" ]
 	then
 		if ! mkdir -p "${dpath_state}"
 		then
 			printf 'pimp: unable to create state directory: %s\n' "${dpath_state}" >&2
+			return 2
+		fi
+	fi
+
+	if ! [ -d "${dpath_share}" ]
+	then
+		if ! mkdir -p "${dpath_share}"
+		then
+			printf 'pimp: unable to create share directory: %s\n' "${dpath_share}" >&2
 			return 2
 		fi
 	fi
@@ -363,13 +373,15 @@ play_music()
 		printf 'func play_music sys: %s<\n' "${sys}"
 	fi
 
-	local dpath_state="${PIMP_DPATH_STATE}"
 	local dpath_conf="${PIMP_DPATH_CONF}"
-	local dpath_state_pback_pos="${PIMP_DPATH_STATE_PBACK_POS}"
 	local dpath_dname_fzf_selection=
 	local dpath_music="${PIMP_DPATH_MUSIC}"
+	local dpath_state="${PIMP_DPATH_STATE}"
+	local dpath_state_pback_pos="${PIMP_DPATH_STATE_PBACK_POS}"
+	local dpath_share="${PIMP_DPATH_SHARE}"
+
 	local fpath_pback_input_conf="${dpath_conf}/input.conf"
-	local fpath_pback_pos_asave_script="${dpath_state}/autosave.lua"
+	local fpath_pback_pos_asave_script="${dpath_share}/autosave.lua"
 	local fpath_plist="${PIMP_FPATH_PLIST}"
 
 	if ! [ "${PIMP_DEBUG}" = 1 ]
