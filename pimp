@@ -23,11 +23,12 @@ PIMP_DPATH_CACHE="${PIMP_DPATH_CACHE-"${HOME}/.cache/pimp"}"
 PIMP_DPATH_CONFG="${PIMP_DPATH_CONFG-"${HOME}/.config/pimp"}"
 PIMP_DPATH_MUSIC="${PIMP_DPATH_MUSIC-"${HOME}/Music"}"
 PIMP_DPATH_SHARE="${PIMP_DPATH_SHARE-"${HOME}/.local/share/pimp"}"
+PIMP_DPATH_SHARE_SOUND="${PIMP_DPATH_SHARE}/sound"
 PIMP_DPATH_STATE="${PIMP_DPATH_STATE-"${HOME}/.local/state/pimp"}"
 PIMP_DPATH_STATE_PBACK="${PIMP_DPATH_STATE}/playback"
 PIMP_FPATH_STATE_PLIST="${PIMP_DPATH_STATE}/playlist"
 
-export PIMP_SCRIPT=  #  environment variable mpv lua scripts can make use of to enforce
+export PIMP_SCRIPT=  #  allows users to make use of mpv lua scripts while also enforcing
                      #  pimp-exclusivity. to enable this, use this at beginning of said scripts:
                      #
                      #  ```
@@ -89,6 +90,9 @@ display_dname_fzf()
 	local dpath_music="${PIMP_DPATH_MUSIC}"
 	local fzf_opt=
 	local fzf_query="${str}"
+
+	export PIMP_CALLED_VIA_DPATH_DISPLAY=  #  allows another function to determine whether
+	                                       #  it was called via this specific function.
 
 	if [ -n "${opt}" ]
 	then
@@ -172,7 +176,11 @@ display_fpath_fzf()
 	fi
 
 	set_terminal_title
-	play_tonal_sound high "-${opt}" &
+
+	if ! set | grep -q '^PIMP_CALLED_VIA_DPATH_DISPLAY='
+	then
+		play_tonal_sound high "-${opt}"
+	fi
 
 	find -L "${dpath_music}" -type f | \
 	cut -d '/' -f "$(print_cut_field_selection_number)" | sed '/^$/d' | sort -r | \
@@ -307,6 +315,7 @@ make_app_file_structure()
 	local dpath_cache="${PIMP_DPATH_CACHE}"
 	local dpath_confg="${PIMP_DPATH_CONFG}"
 	local dpath_share="${PIMP_DPATH_SHARE}"
+	local dpath_share_sound="${PIMP_DPATH_SHARE_SOUND}"
 	local dpath_state="${PIMP_DPATH_STATE}"
 	local dpath_state_pback="${PIMP_DPATH_STATE_PBACK}"
 
@@ -331,6 +340,15 @@ make_app_file_structure()
 		if ! mkdir -p "${dpath_share}"
 		then
 			printf 'pimp: unable to create share directory: %s\n' "${dpath_share}" >&2
+			return 2
+		fi
+	fi
+
+	if ! [ -d "${dpath_share_sound}" ]
+	then
+		if ! mkdir -p "${dpath_share_sound}"
+		then
+			printf 'pimp: unable to create sound effect directory: %s\n' "${dpath_share_sound}" >&2
 			return 2
 		fi
 	fi
@@ -523,7 +541,7 @@ play_speech()
 
 play_tonal_sound()
 {
-	#  synopsis:  plays tonals sounds for auditory navigation.
+	#  synopsis:  generates and plays tonal sound effects for auditory navigation.
 
 	local opt="$(
 		printf '%s' "$*"          | \
@@ -555,36 +573,138 @@ play_tonal_sound()
 		return 1
 	fi
 
+	local dpath_cache="${PIMP_DPATH_CACHE}"
+	local dpath_share_sound="${PIMP_DPATH_SHARE_SOUND}"
+	local fpath_share_sound=
+
 	case "${str}" in
+
 		clsh)
+
 			#  text (search box cleared)
-			play -qn synth sine 0200 trim 0 0.05 gain -20 &
+			local fpath_share_sound="${dpath_share_sound}/clsh.wav"
+
+			if ! [ -f "${fpath_share_sound}" ]
+			then
+				sox -n "${fpath_share_sound}" \
+					synth sine 0200 trim 0 0.05 gain -20
+			fi
+
+			play -q "${fpath_share_sound}" &
 			;;
+
 		ffpi)
+
 			#  display_fpath_fzf playlist initialization
-			play -qn synth sine 0500 trim 0 0.05 gain -20
+			local fpath_share_sound="${dpath_share_sound}/ffpi.wav"
+
+			if ! [ -f "${fpath_share_sound}" ]
+			then
+				sox -n "${dpath_cache}/1.wav" \
+					synth sine 0500 trim 0 0.05 gain -20 \
+					pad 0 0.05
+
+				sox -n "${dpath_cache}/2.wav" \
+					synth sine 0500 trim 0 0.05 gain -20 \
+					pad 0 0.05
+
+				sox -n "${dpath_cache}/3.wav" \
+					synth sine 0500 trim 0 0.05 gain -20 \
+					pad 0 0.05
+
+				sox \
+					"${dpath_cache}/1.wav" \
+					"${dpath_cache}/2.wav" \
+					"${dpath_cache}/3.wav" \
+					"${fpath_share_sound}"
+
+				rm -f "${dpath_cache}/*.wav"
+			fi
+
+			play -q "${fpath_share_sound}" &
 			;;
+
 		ffbk)
+
 			#  fuzzy finder (return to display_dname_fzf)
-			play -qn synth sine 1500 trim 0 0.05 gain -30
-			play -qn synth sine 1400 trim 0 0.05 gain -30
+			local fpath_share_sound="${dpath_share_sound}/ffbk.wav"
+
+			if ! [ -f "${fpath_share_sound}" ]
+			then
+				sox -n "${dpath_cache}/1.wav" \
+					synth sine 1500 trim 0 0.05 gain -30 \
+					pad 0 0.1
+
+				sox -n "${dpath_cache}/2.wav" \
+					synth sine 1400 trim 0 0.05 gain -30
+
+				sox \
+					"${dpath_cache}/1.wav" \
+					"${dpath_cache}/2.wav" \
+					"${fpath_share_sound}"
+
+				rm -f "${dpath_cache}/*.wav"
+			fi
+
+			play -q "${fpath_share_sound}" &
 			;;
+
 		ffgo)
+
 			#  fuzzy finder (change to display_fpath_fzf)
-			play -qn synth sine 1500 trim 0 0.05 gain -30
+			local fpath_share_sound="${dpath_share_sound}/ffgo.wav"
+
+			if ! [ -f "${fpath_share_sound}" ]
+			then
+				sox -n "${dpath_cache}/1.wav" \
+					synth sine 1500 trim 0 0.05 gain -30 \
+					pad 0 0.1
+
+				sox -n "${dpath_cache}/2.wav" \
+					synth sine 2000 trim 0 0.05 gain -30
+
+				sox \
+					"${dpath_cache}/1.wav" \
+					"${dpath_cache}/2.wav" \
+					"${fpath_share_sound}"
+
+				rm -f "${dpath_cache}/*.wav"
+			fi
+
+			play -q "${fpath_share_sound}" &
 			;;
+
 		high)
+
 			#  item (highlighted)
-			play -qn synth sine 2000 trim 0 0.05 gain -30
+			local fpath_share_sound="${dpath_share_sound}/high.wav"
+
+			if ! [ -f "${fpath_share_sound}" ]
+			then
+				sox -n "${fpath_share_sound}" \
+					synth sine 2000 trim 0 0.05 gain -30
+			fi
+
+			play -q "${fpath_share_sound}" &
 			;;
+
 		play)
+
 			#  item (selected for music playback)
 			if _opt_exist b "${opt}"
 			then
 				return 0
 			fi
 
-			play -qn synth sine 1000 trim 0 0.05 gain -30
+			local fpath_share_sound="${dpath_share_sound}/play.wav"
+
+			if ! [ -f "${fpath_share_sound}" ]
+			then
+				sox -n "${fpath_share_sound}" \
+					synth sine 1000 trim 0 0.05 gain -30
+			fi
+
+			play -q "${fpath_share_sound}" &
 			;;
 	esac
 
