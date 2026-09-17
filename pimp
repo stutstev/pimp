@@ -20,10 +20,23 @@ EOF
 #  Copyright (c) 2022-2026 Steven Peguero (stevenpeguero.com)
 #  Source is licensed under MIT License. Refer to LICENSE file for details.
 
-_depends_dire="pimp fzf mpv"
-_depends_optional="espeak sox"
-_params="$(printf '%s\n' "$*" | awk '{$1=""; print}' | sed 's/^[[:space:]]*//g')"
 _sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
+
+_bin_fzf='fzf'
+_bin_mus='mpv'
+_bin_snd='sox'
+_bin_tts=
+
+if [ ! "${_sys}" = 'darwin' ]
+then
+	_bin_tts='espeak'
+else
+	_bin_tts='say'
+fi
+
+_depends_dire="pimp ${_bin_fzf} ${_bin_mus}"
+_depends_optional="${_bin_tts} ${_bin_snd}"
+_params="$(printf '%s\n' "$*" | awk '{$1=""; print}' | sed 's/^[[:space:]]*//g')"
 
 PIMP_DEBUG="${PIMP_DEBUG-0}"
 PIMP_DPATH_CACHE="${PIMP_DPATH_CACHE-"${HOME}/.cache/pimp"}"
@@ -80,7 +93,7 @@ show_dname_fzf()
 	cut -d '/' -f "$(print_cut_field_selection_number)" | sed '/^$/d' | sed '1i\
 .
 	' | sort -r | \
-	fzf -i -s -m -e \
+	"${_bin_fzf}" -i -s -m -e \
 		--header 'pimp (dir)' \
 		--header-first \
 		--border rounded \
@@ -92,22 +105,22 @@ show_dname_fzf()
 		--cycle \
 		--tac \
 		--layout reverse \
-		--preview "pkill -x espeak; pimp app-speech ${fzf_opt} {}; pimp app-tone high ${fzf_opt}" \
+		--preview "pkill -x ${_bin_tts}; pimp app-speech ${fzf_opt} {}; pimp app-tone high ${fzf_opt}" \
 		--preview-window 0% \
-		--bind "enter:execute(pkill -x espeak; pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
-		--bind "double-click:execute(pkill -x espeak; pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
-		--bind "insert:execute-silent(pkill -x espeak; pimp app-tone ffgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ffbk ${fzf_opt})" \
-		--bind "f5:execute-silent(pkill -x espeak; pimp app-tone ffgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ffbk ${fzf_opt})" \
-		--bind "f6:execute(pkill -x espeak; pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
-		--bind "*:execute(pkill -x espeak; pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
+		--bind "enter:execute(pkill -x ${_bin_tts}; pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
+		--bind "double-click:execute(pkill -x ${_bin_tts}; pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
+		--bind "insert:execute-silent(pkill -x ${_bin_tts}; pimp app-tone ffgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ffbk ${fzf_opt})" \
+		--bind "f5:execute-silent(pkill -x ${_bin_tts}; pimp app-tone ffgo ${fzf_opt})+execute(pimp file ${fzf_opt})+execute-silent(pimp app-tone ffbk ${fzf_opt})" \
+		--bind "f6:execute(pkill -x ${_bin_tts}; pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
+		--bind "*:execute(pkill -x ${_bin_tts}; pimp play ${fzf_opt}; pimp app-tone high ${fzf_opt})" \
 		--bind 'change:first' \
 		--bind 'bspace:clear-query' \
 		--bind 'home:first' \
 		--bind 'end:last' \
-		--bind 'esc:execute(pkill -x espeak)+abort' \
-		--bind 'tab:execute(pkill -x espeak)+abort' \
-		--bind 'alt-q:execute(pkill -x espeak)+abort' \
-		--bind 'ctrl-q:execute(pkill -x espeak)+abort'
+		--bind "esc:execute(pkill -x ${_bin_tts})+abort" \
+		--bind "tab:execute(pkill -x ${_bin_tts})+abort" \
+		--bind "alt-q:execute(pkill -x ${_bin_tts})+abort" \
+		--bind "ctrl-q:execute(pkill -x ${_bin_tts})+abort"
 }
 
 show_fpath_fzf()
@@ -148,7 +161,7 @@ show_fpath_fzf()
 
 	find -L "${dpath_music}" -type f | \
 	cut -d '/' -f "$(print_cut_field_selection_number)" | sed '/^$/d' | sort -r | \
-	fzf -i -s -m -e \
+	"${_bin_fzf}" -i -s -m -e \
 		--header 'pimp (file)' \
 		--header-first \
 		--border rounded \
@@ -351,7 +364,7 @@ play_music()
 
 		play_tonal_sound play "-${opt}"
 
-		mpv \
+		"${_bin_mus}" \
 			--af-add=scaletempo=speed=both \
 			--audio-pitch-correction=no \
 			--display-tags= \
@@ -407,9 +420,9 @@ play_speech()
 				fi
 				;;
 			*)
-				if command -v espeak >/dev/null 2>&1
+				if command -v "${_bin_tts}" >/dev/null 2>&1
 				then
-					espeak "$@"
+					"${_bin_tts}" "$@"
 				else
 					return 1
 				fi
@@ -471,24 +484,24 @@ play_tonal_sound()
 			#  pimp boot / initialization (for stereos)
 			local fpath_share_sound="${dpath_share_sound}/boot.wav"
 
-			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
+			if ! [ -f "${fpath_share_sound}" ] && command -v "${_bin_snd}" >/dev/null 2>&1
 			then
-				sox -n "${dpath_cache}/1.wav" \
+				"${_bin_snd}" -n "${dpath_cache}/1.wav" \
 					synth sine 1000 trim 0 0.15 gain -30 \
 					pad 0 0.001 \
 					gain 5
 
-				sox -n "${dpath_cache}/2.wav" \
+				"${_bin_snd}" -n "${dpath_cache}/2.wav" \
 					synth sine 1500 trim 0 0.15 gain -30 \
 					pad 0 0.001 \
 					gain 5
 
-				sox -n "${dpath_cache}/3.wav" \
+				"${_bin_snd}" -n "${dpath_cache}/3.wav" \
 					synth sine 2000 trim 0 0.15 gain -30 \
 					pad 0 1 \
 					gain 5
 
-				sox \
+				"${_bin_snd}" \
 					"${dpath_cache}/1.wav" \
 					"${dpath_cache}/2.wav" \
 					"${dpath_cache}/3.wav" \
@@ -503,9 +516,9 @@ play_tonal_sound()
 			#  text (search box cleared)
 			local fpath_share_sound="${dpath_share_sound}/clsh.wav"
 
-			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
+			if ! [ -f "${fpath_share_sound}" ] && command -v "${_bin_snd}" >/dev/null 2>&1
 			then
-				sox -n "${fpath_share_sound}" \
+				"${_bin_snd}" -n "${fpath_share_sound}" \
 					synth sine 0200 trim 0 0.05 gain -20 \
 					pad 0 0.1
 			fi
@@ -516,21 +529,21 @@ play_tonal_sound()
 			#  show_fpath_fzf playlist initialization
 			local fpath_share_sound="${dpath_share_sound}/ffpi.wav"
 
-			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
+			if ! [ -f "${fpath_share_sound}" ] && command -v "${_bin_snd}" >/dev/null 2>&1
 			then
-				sox -n "${dpath_cache}/1.wav" \
+				"${_bin_snd}" -n "${dpath_cache}/1.wav" \
 					synth sine 0500 trim 0 0.05 gain -20 \
 					pad 0 0.05
 
-				sox -n "${dpath_cache}/2.wav" \
+				"${_bin_snd}" -n "${dpath_cache}/2.wav" \
 					synth sine 0500 trim 0 0.05 gain -20 \
 					pad 0 0.05
 
-				sox -n "${dpath_cache}/3.wav" \
+				"${_bin_snd}" -n "${dpath_cache}/3.wav" \
 					synth sine 0500 trim 0 0.05 gain -20 \
 					pad 0 1
 
-				sox \
+				"${_bin_snd}" \
 					"${dpath_cache}/1.wav" \
 					"${dpath_cache}/2.wav" \
 					"${dpath_cache}/3.wav" \
@@ -545,17 +558,17 @@ play_tonal_sound()
 			#  fuzzy finder (return to show_dname_fzf)
 			local fpath_share_sound="${dpath_share_sound}/ffbk.wav"
 
-			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
+			if ! [ -f "${fpath_share_sound}" ] && command -v "${_bin_snd}" >/dev/null 2>&1
 			then
-				sox -n "${dpath_cache}/1.wav" \
+				"${_bin_snd}" -n "${dpath_cache}/1.wav" \
 					synth sine 1500 trim 0 0.05 gain -30 \
 					pad 0 0.1
 
-				sox -n "${dpath_cache}/2.wav" \
+				"${_bin_snd}" -n "${dpath_cache}/2.wav" \
 					synth sine 1400 trim 0 0.05 gain -30 \
 					pad 0 0.1
 
-				sox \
+				"${_bin_snd}" \
 					"${dpath_cache}/1.wav" \
 					"${dpath_cache}/2.wav" \
 					"${fpath_share_sound}"
@@ -569,17 +582,17 @@ play_tonal_sound()
 			#  fuzzy finder (change to show_fpath_fzf)
 			local fpath_share_sound="${dpath_share_sound}/ffgo.wav"
 
-			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
+			if ! [ -f "${fpath_share_sound}" ] && command -v "${_bin_snd}" >/dev/null 2>&1
 			then
-				sox -n "${dpath_cache}/1.wav" \
+				"${_bin_snd}" -n "${dpath_cache}/1.wav" \
 					synth sine 1500 trim 0 0.05 gain -30 \
 					pad 0 0.1
 
-				sox -n "${dpath_cache}/2.wav" \
+				"${_bin_snd}" -n "${dpath_cache}/2.wav" \
 					synth sine 2000 trim 0 0.05 gain -30 \
 					pad 0 0.1
 
-				sox \
+				"${_bin_snd}" \
 					"${dpath_cache}/1.wav" \
 					"${dpath_cache}/2.wav" \
 					"${fpath_share_sound}"
@@ -593,9 +606,9 @@ play_tonal_sound()
 			#  item (highlighted)
 			local fpath_share_sound="${dpath_share_sound}/high.wav"
 
-			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
+			if ! [ -f "${fpath_share_sound}" ] && command -v "${_bin_snd}" >/dev/null 2>&1
 			then
-				sox -n "${fpath_share_sound}" \
+				"${_bin_snd}" -n "${fpath_share_sound}" \
 					synth sine 2000 trim 0 0.05 gain -30 \
 					pad 0 0.1
 			fi
@@ -611,9 +624,9 @@ play_tonal_sound()
 
 			local fpath_share_sound="${dpath_share_sound}/play.wav"
 
-			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
+			if ! [ -f "${fpath_share_sound}" ] && command -v "${_bin_snd}" >/dev/null 2>&1
 			then
-				sox -n "${fpath_share_sound}" \
+				"${_bin_snd}" -n "${fpath_share_sound}" \
 					synth sine 1000 trim 0 0.05 gain -30 \
 					pad 0 0.1
 			fi
