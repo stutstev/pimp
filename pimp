@@ -97,7 +97,7 @@ show_dname_fzf()
 		--header 'pimp (dir)' \
 		--header-first \
 		--border rounded \
-		--color fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:1,header:11,prompt:7,info:8 \
+		--color fg+:16,bg+:10,hl:9,hl+:1,gutter:1 \
 		--prompt '> ' \
 		--algo v1 \
 		--query "${fzf_query}" \
@@ -165,7 +165,7 @@ show_fpath_fzf()
 		--header 'pimp (file)' \
 		--header-first \
 		--border rounded \
-		--color fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:12,header:11,prompt:7,info:8 \
+		--color fg+:16,bg+:10,hl:9,hl+:1,gutter:1 \
 		--prompt '> ' \
 		--algo v1 \
 		--query "${fzf_query}" \
