@@ -13,14 +13,15 @@
 
 # Prerequisites
 
-As `pimp` is a wrapper and not a standalone program, the prerequisites are as follows:
+As `pimp` is a wrapper script and not a standalone program, the prerequisites are as follows:
 
-Program  | Minimum Version | Version Standing | Purpose
----      | ---             | ---              | ---
-`fzf`    | 0.38.0          | Hard Requirement | Music Selection
-`mpv`    | 0.33.0          | Hard Requirement | Music Playback
-`espeak` | 1.48            | Tested           | Text-to-Speech
-`sox`    | 14.4.2          | Tested           | Sound Generator
+Program  | Minimum Version | Version Standing | Platform | Purpose
+---      | ---             | ---              | ---      | ---
+`fzf`    | 0.38.0          | Hard Requirement |          | Music Selection
+`mpv`    | 0.33.0          | Hard Requirement |          | Music Playback
+`sox`    | 14.4.2          | Tested           |          | Sound Generator
+`espeak` | 1.48            | Tested           |          | Text-to-Speech
+`say`    |                 | Tested           | macOS    | Text-to-Speech
 
 <br>
 <br>

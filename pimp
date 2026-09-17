@@ -1,22 +1,29 @@
 #!/bin/sh
 
-#                             :::::::::   +#+    :::   :::    :::::::::
-#                (/;         :+:    :+:        :+:+: :+:+:   :+:    :+:
-#         .--..-(/;         +:+    +:+  +:+  +:+ +:+:+ +:+  +:+    +:+
-#         |    (/;         +#++:++#+   +#+  +#+  +:+  +#+  +#++:++#+
-#       __|====/=|__      +#+         +#+  +#+       +#+  +#+
-#      (____________)    #+#         #+#  #+#       #+#  #+#
-#                       ###         ###  ###       ###  ###
-#    
-#                                             raspberry pi music player
-#                                                       -- -     -
-#
+show_logo()
+{
+	cat <<EOF
+
+                          :::::::::   +#+    :::   :::    :::::::::
+             (/;         :+:    :+:        :+:+: :+:+:   :+:    :+:
+      .--..-(/;         +:+    +:+  +:+  +:+ +:+:+ +:+  +:+    +:+
+      |    (/;         +#++:++#+   +#+  +#+  +:+  +#+  +#++:++#+
+    __|====/=|__      +#+         +#+  +#+       +#+  +#+
+   (____________)    #+#         #+#  #+#       #+#  #+#
+                    ###         ###  ###       ###  ###
+
+                                          raspberry pi music player
+                                                    -- -     -
+EOF
+}
+
 #  Copyright (c) 2022-2026 Steven Peguero (stevenpeguero.com)
 #  Source is licensed under MIT License. Refer to LICENSE file for details.
 
-depends_dire="pimp fzf mpv"
-depends_optional="espeak sox"
-param="$(printf '%s\n' "$*" | awk '{$1=""; print}' | sed 's/^[[:space:]]*//g')"
+_depends_dire="pimp fzf mpv"
+_depends_optional="espeak sox"
+_params="$(printf '%s\n' "$*" | awk '{$1=""; print}' | sed 's/^[[:space:]]*//g')"
+_sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
 PIMP_DEBUG="${PIMP_DEBUG-0}"
 PIMP_DPATH_CACHE="${PIMP_DPATH_CACHE-"${HOME}/.cache/pimp"}"
@@ -42,46 +49,14 @@ export PIMP_SCRIPT=  #  allows users to make use of mpv lua scripts while also e
                      #
                      #  scripts should be stored within "$HOME/.config/mpv/scripts".
 
-_opt_exist()
-{
-	#  synopsis:  confirms existence of parameter option passed from function call.
-	#
-	#  usage:
-	#    _opt_exist a "${string}"
-	#        ^
-	#        |
-	#        |
-	#        "a" as in an "-a" option when calling a function.
-	#
-	#  below, a string / $2 ("a") must match specified option / $1 ("-a").
-
-	if printf '%s' "$2" | grep -q "$1"
-	then
-		return 0  #  true
-	else
-		return 1  #  false
-	fi
-}
-
-display_dname_fzf()
+show_dname_fzf()
 {
 	#  synopsis:  shows recursive and interactive list of directories to play.
 
-	local opt="$(
-		printf '%s' "$*"          | \
-		grep -o '\-[a-zA-Z0-9]*'  | \
-		sed 's/-//g'              | \
-		tr -d '\n'
-	)"
+	local opt="$(_params_opt "$*")"
+	local str="$(_params_str "$*")"
 
-	local str="$(
-		printf '%s' "$*"          | \
-		sed 's/\-[a-zA-Z0-9]*//g' | \
-		sed 's/^[[:space:]]*//g'  | \
-		sed 's/[[:space:]]*$//g'
-	)"
-
-	if _opt_exist b "${opt}"
+	if _exists_opt b "${opt}"
 	then
 		#  omits opt to resume "play" tonal sound at start of music playback.
 		local opt="$(printf '%s' "${opt}" | tr -d b)"
@@ -109,7 +84,7 @@ display_dname_fzf()
 		--header 'pimp (dir)' \
 		--header-first \
 		--border rounded \
-		--color fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:1,header:11,prompt:7,info:8,query:15 \
+		--color fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:1,header:11,prompt:7,info:8 \
 		--prompt '> ' \
 		--algo v1 \
 		--query "${fzf_query}" \
@@ -117,7 +92,7 @@ display_dname_fzf()
 		--cycle \
 		--tac \
 		--layout reverse \
-		--preview "pkill -x espeak; pimp app-speech ${fzf_opt} {} && pimp app-tone high ${fzf_opt}" \
+		--preview "pkill -x espeak; pimp app-speech ${fzf_opt} {}; pimp app-tone high ${fzf_opt}" \
 		--preview-window 0% \
 		--bind "enter:execute(pkill -x espeak; pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
 		--bind "double-click:execute(pkill -x espeak; pimp app-rmpp; pimp play -ds ${fzf_opt} {}; pimp app-tone high ${fzf_opt})" \
@@ -129,31 +104,20 @@ display_dname_fzf()
 		--bind 'bspace:clear-query' \
 		--bind 'home:first' \
 		--bind 'end:last' \
-		--bind 'esc:abort' \
-		--bind 'tab:abort' \
-		--bind 'alt-q:abort' \
-		--bind 'ctrl-q:abort'
+		--bind 'esc:execute(pkill -x espeak)+abort' \
+		--bind 'tab:execute(pkill -x espeak)+abort' \
+		--bind 'alt-q:execute(pkill -x espeak)+abort' \
+		--bind 'ctrl-q:execute(pkill -x espeak)+abort'
 }
 
-display_fpath_fzf()
+show_fpath_fzf()
 {
 	#  synopsis:  shows recursive and interactive list of files to play.
 
-	local opt="$(
-		printf '%s' "$*"          | \
-		grep -o '\-[a-zA-Z0-9]*'  | \
-		sed 's/-//g'              | \
-		tr -d '\n'
-	)"
+	local opt="$(_params_opt "$*")"
+	local str="$(_params_str "$*")"
 
-	local str="$(
-		printf '%s' "$*"          | \
-		sed 's/\-[a-zA-Z0-9]*//g' | \
-		sed 's/^[[:space:]]*//g'  | \
-		sed 's/[[:space:]]*$//g'
-	)"
-
-	if _opt_exist b "${opt}"
+	if _exists_opt b "${opt}"
 	then
 		#  omits opt to resume "play" tonal sound at start of music playback.
 		local opt="$(printf '%s' "${opt}" | tr -d b)"
@@ -188,7 +152,7 @@ display_fpath_fzf()
 		--header 'pimp (file)' \
 		--header-first \
 		--border rounded \
-		--color fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:12,header:11,prompt:7,info:8,query:15 \
+		--color fg+:0,bg+:10,hl:9,hl+:1,border:11,gutter:12,header:11,prompt:7,info:8 \
 		--prompt '> ' \
 		--algo v1 \
 		--query "${fzf_query}" \
@@ -286,7 +250,7 @@ get_file_modtime()
 
 	local f="$1"
 	local modtime=
-	local sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
+	local sys="${_sys}"
 
 	if ! [ -f "${f}" ]
 	then
@@ -299,7 +263,7 @@ get_file_modtime()
 			local modtime="$(stat -c %Y "${f}")"
 			printf '%s' "${modtime}"
 			;;
-		openbsd|darwin|*)
+		darwin|openbsd|*)
 			local modtime="$(stat -f %m "${f}")"
 			printf '%s' "${modtime}"
 			;;
@@ -308,96 +272,21 @@ get_file_modtime()
 	return 0
 }
 
-make_app_file_structure()
-{
-	#  synopsis:  creates application file structure.
-
-	local dpath_cache="${PIMP_DPATH_CACHE}"
-	local dpath_confg="${PIMP_DPATH_CONFG}"
-	local dpath_share="${PIMP_DPATH_SHARE}"
-	local dpath_share_sound="${PIMP_DPATH_SHARE_SOUND}"
-	local dpath_state="${PIMP_DPATH_STATE}"
-	local dpath_state_pback="${PIMP_DPATH_STATE_PBACK}"
-
-	if ! [ -d "${dpath_cache}" ]
-	then
-		if ! mkdir -p "${dpath_cache}"
-		then
-			printf 'pimp: unable to create cache directory: %s\n' "${dpath_cache}" >&2
-		fi
-	fi
-
-	if ! [ -d "${dpath_confg}" ]
-	then
-		if ! mkdir -p "${dpath_confg}"
-		then
-			printf 'pimp: unable to create configuration directory: %s\n' "${dpath_confg}" >&2
-		fi
-	fi
-
-	if ! [ -d "${dpath_share}" ]
-	then
-		if ! mkdir -p "${dpath_share}"
-		then
-			printf 'pimp: unable to create share directory: %s\n' "${dpath_share}" >&2
-			return 2
-		fi
-	fi
-
-	if ! [ -d "${dpath_share_sound}" ]
-	then
-		if ! mkdir -p "${dpath_share_sound}"
-		then
-			printf 'pimp: unable to create sound effect directory: %s\n' "${dpath_share_sound}" >&2
-			return 2
-		fi
-	fi
-
-	if ! [ -d "${dpath_state}" ]
-	then
-		if ! mkdir -p "${dpath_state}"
-		then
-			printf 'pimp: unable to create state directory: %s\n' "${dpath_state}" >&2
-			return 2
-		fi
-	fi
-
-	if ! [ -d "${dpath_state_pback}" ]
-	then
-		if ! mkdir -p "${dpath_state_pback}"
-		then
-			printf 'pimp: unable to create playback position directory: %s\n' "${dpath_state_pback}" >&2
-		fi
-	fi
-
-	return 0
-}
-
 play_music()
 {
 	#  synopsis:  plays contents of generated playlist file.
 
-	local opt="$(
-		printf '%s' "$*"          | \
-		grep -o '\-[a-zA-Z0-9]*'  | \
-		sed 's/-//g'              | \
-		tr -d '\n'
-	)"
+	local opt="$(_params_opt "$*")"
+	local str="$(_params_str "$*")"
+	local sys="${_sys}"
 
-	local str="$(
-		printf '%s' "$*"          | \
-		sed 's/\-[a-zA-Z0-9]*//g' | \
-		sed 's/^[[:space:]]*//g'  | \
-		sed 's/[[:space:]]*$//g'
-	)"
-
-	local sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
-
-	if [ "${PIMP_DEBUG}" = 1 ]
+	if _enabled_debug
 	then
 		printf 'func play_music opt: %s<\n' "${opt}"
 		printf 'func play_music str: %s<\n' "${str}"
 		printf 'func play_music sys: %s<\n' "${sys}"
+	else
+		clear
 	fi
 
 	local dpath_confg="${PIMP_DPATH_CONFG}"
@@ -411,14 +300,9 @@ play_music()
 	local fpath_share_script_pback_autosave="${dpath_share}/autosave.lua"
 	local fpath_state_plist="${PIMP_FPATH_STATE_PLIST}"
 
-	if ! [ "${PIMP_DEBUG}" = 1 ]
+	if _exists_opt d "${opt}" && [ -n "${str}" ]
 	then
-		clear
-	fi
-
-	if _opt_exist d "${opt}" && [ -n "${str}" ]
-	then
-		#  create playlist file using display_dname_fzf selection.
+		#  create playlist file using show_dname_fzf selection.
 
 		if [ -d "${dpath_music}/${str}" ]
 		then
@@ -448,7 +332,7 @@ play_music()
 	if [ -f "${fpath_state_plist}" ]
 	then
 
-		if _opt_exist s "${opt}"
+		if _exists_opt s "${opt}"
 		then
 			#  shuffle playlist file content.
 			sort -R "${fpath_state_plist}" -o "${fpath_state_plist}"
@@ -484,6 +368,7 @@ play_music()
 			--term-status-msg="\n(\${playlist-pos-1}/\${playlist-count}) \${time-pos} / \${duration} (\${percent-pos}%) (x\${speed}) \${?loop-file==inf:+LF }\${?mute==yes:+M }\${?pause==yes:(Paused)}" \
 			--term-title="pimp -- \${filename}" \
 			--vo=null \
+			--volume=100 \
 			--volume-max=100 \
 			--video=no \
 			--watch-later-directory="${dpath_state_pback}" \
@@ -501,38 +386,52 @@ play_speech()
 {
 	#  synopsis:  plays speech for auditory navigation.
 
-	local opt="$(
-		printf '%s' "$*"          | \
-		grep -o '\-[a-zA-Z0-9]*'  | \
-		sed 's/-//g'              | \
-		tr -d '\n'
-	)"
+	local opt="$(_params_opt "$*")"
+	local str="$(_params_str "$*")"
+	local sys="${_sys}"
 
-	local str="$(
-		printf '%s' "$*"          | \
-		sed 's/\-[a-zA-Z0-9]*//g' | \
-		sed 's/^[[:space:]]*//g'  | \
-		sed 's/[[:space:]]*$//g'
-	)"
-
-	local sys="$(uname -s | tr '[:upper:]' '[:lower:]')"
-
-	if _opt_exist Q "${opt}"
+	if _exists_opt Q "${opt}"
 	then
 		return 0
 	fi
 
-	if ! command -v espeak >/dev/null 2>&1
-	then
-		return 1
-	fi
+	cmd_tts()
+	{
+		case "${sys}" in
+			darwin)
+				if command -v say >/dev/null 2>&1
+				then
+					say -v fred -r 350 "$@"
+				else
+					return 1
+				fi
+				;;
+			*)
+				if command -v espeak >/dev/null 2>&1
+				then
+					espeak "$@"
+				else
+					return 1
+				fi
+				;;
+		esac
+	}
+
+	str_tts()
+	{
+		#  removes directory path forward slashes for tts
+		printf '%s' "${str}" | sed 's/\//, /g'
+	}
 
 	case "${sys}" in
-		darwin|linux)
-			printf '%s' "${str}" | sed 's/\//, /g' | espeak -a 100 -s 300 || return 1
+		darwin)
+			str_tts | cmd_tts || return 1
 			;;
-		*)
-			printf '%s' "${str}" | sed 's/\//, /g' | espeak -a 100 -s 235 || return 1
+		linux)
+			str_tts | cmd_tts -a 0100 -s 300 || return 1
+			;;
+		openbsd|*)
+			str_tts | cmd_tts -a 0100 -s 235 || return 1
 			;;
 	esac
 
@@ -543,62 +442,81 @@ play_tonal_sound()
 {
 	#  synopsis:  generates and plays tonal sound effects for auditory navigation.
 
-	local opt="$(
-		printf '%s' "$*"          | \
-		grep -o '\-[a-zA-Z0-9]*'  | \
-		sed 's/-//g'              | \
-		tr -d '\n'
-	)"
+	local opt="$(_params_opt "$*")"
+	local str="$(_params_str "$*")"
+	local sys="${_sys}"
 
-	local str="$(
-		printf '%s' "$*"          | \
-		sed 's/\-[a-zA-Z0-9]*//g' | \
-		sed 's/^[[:space:]]*//g'  | \
-		sed 's/[[:space:]]*$//g'
-	)"
-
-	if [ "${PIMP_DEBUG}" = 1 ]
+	if _enabled_debug
 	then
 		printf 'func play_tonal_sound opt: %s<\n' "${opt}"
 		printf 'func play_tonal_sound str: %s<\n' "${str}"
 	fi
 
-	if _opt_exist Q "${opt}"
+	if _exists_opt Q "${opt}"
 	then
 		return 0
-	fi
-
-	if ! command -v sox >/dev/null 2>&1
-	then
-		return 1
 	fi
 
 	local dpath_cache="${PIMP_DPATH_CACHE}"
 	local dpath_share_sound="${PIMP_DPATH_SHARE_SOUND}"
 	local fpath_share_sound=
 
+	cmd_sound_play()
+	{
+		play -q "$1"
+	}
+
 	case "${str}" in
+		boot)
+			#  pimp boot / initialization (for stereos)
+			local fpath_share_sound="${dpath_share_sound}/boot.wav"
 
+			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
+			then
+				sox -n "${dpath_cache}/1.wav" \
+					synth sine 1000 trim 0 0.15 gain -30 \
+					pad 0 0.001 \
+					gain 5
+
+				sox -n "${dpath_cache}/2.wav" \
+					synth sine 1500 trim 0 0.15 gain -30 \
+					pad 0 0.001 \
+					gain 5
+
+				sox -n "${dpath_cache}/3.wav" \
+					synth sine 2000 trim 0 0.15 gain -30 \
+					pad 0 1 \
+					gain 5
+
+				sox \
+					"${dpath_cache}/1.wav" \
+					"${dpath_cache}/2.wav" \
+					"${dpath_cache}/3.wav" \
+					"${fpath_share_sound}"
+
+				rm -f "${dpath_cache}/*.wav"
+			fi
+
+			cmd_sound_play "${fpath_share_sound}"
+			;;
 		clsh)
-
 			#  text (search box cleared)
 			local fpath_share_sound="${dpath_share_sound}/clsh.wav"
 
-			if ! [ -f "${fpath_share_sound}" ]
+			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
 			then
 				sox -n "${fpath_share_sound}" \
-					synth sine 0200 trim 0 0.05 gain -20
+					synth sine 0200 trim 0 0.05 gain -20 \
+					pad 0 0.1
 			fi
 
-			play -q "${fpath_share_sound}" &
+			cmd_sound_play "${fpath_share_sound}" &
 			;;
-
 		ffpi)
-
-			#  display_fpath_fzf playlist initialization
+			#  show_fpath_fzf playlist initialization
 			local fpath_share_sound="${dpath_share_sound}/ffpi.wav"
 
-			if ! [ -f "${fpath_share_sound}" ]
+			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
 			then
 				sox -n "${dpath_cache}/1.wav" \
 					synth sine 0500 trim 0 0.05 gain -20 \
@@ -610,7 +528,7 @@ play_tonal_sound()
 
 				sox -n "${dpath_cache}/3.wav" \
 					synth sine 0500 trim 0 0.05 gain -20 \
-					pad 0 0.05
+					pad 0 1
 
 				sox \
 					"${dpath_cache}/1.wav" \
@@ -621,22 +539,21 @@ play_tonal_sound()
 				rm -f "${dpath_cache}/*.wav"
 			fi
 
-			play -q "${fpath_share_sound}" &
+			cmd_sound_play "${fpath_share_sound}" &
 			;;
-
 		ffbk)
-
-			#  fuzzy finder (return to display_dname_fzf)
+			#  fuzzy finder (return to show_dname_fzf)
 			local fpath_share_sound="${dpath_share_sound}/ffbk.wav"
 
-			if ! [ -f "${fpath_share_sound}" ]
+			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
 			then
 				sox -n "${dpath_cache}/1.wav" \
 					synth sine 1500 trim 0 0.05 gain -30 \
 					pad 0 0.1
 
 				sox -n "${dpath_cache}/2.wav" \
-					synth sine 1400 trim 0 0.05 gain -30
+					synth sine 1400 trim 0 0.05 gain -30 \
+					pad 0 0.1
 
 				sox \
 					"${dpath_cache}/1.wav" \
@@ -646,22 +563,21 @@ play_tonal_sound()
 				rm -f "${dpath_cache}/*.wav"
 			fi
 
-			play -q "${fpath_share_sound}" &
+			cmd_sound_play "${fpath_share_sound}" &
 			;;
-
 		ffgo)
-
-			#  fuzzy finder (change to display_fpath_fzf)
+			#  fuzzy finder (change to show_fpath_fzf)
 			local fpath_share_sound="${dpath_share_sound}/ffgo.wav"
 
-			if ! [ -f "${fpath_share_sound}" ]
+			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
 			then
 				sox -n "${dpath_cache}/1.wav" \
 					synth sine 1500 trim 0 0.05 gain -30 \
 					pad 0 0.1
 
 				sox -n "${dpath_cache}/2.wav" \
-					synth sine 2000 trim 0 0.05 gain -30
+					synth sine 2000 trim 0 0.05 gain -30 \
+					pad 0 0.1
 
 				sox \
 					"${dpath_cache}/1.wav" \
@@ -671,40 +587,38 @@ play_tonal_sound()
 				rm -f "${dpath_cache}/*.wav"
 			fi
 
-			play -q "${fpath_share_sound}" &
+			cmd_sound_play "${fpath_share_sound}" &
 			;;
-
 		high)
-
 			#  item (highlighted)
 			local fpath_share_sound="${dpath_share_sound}/high.wav"
 
-			if ! [ -f "${fpath_share_sound}" ]
+			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
 			then
 				sox -n "${fpath_share_sound}" \
-					synth sine 2000 trim 0 0.05 gain -30
+					synth sine 2000 trim 0 0.05 gain -30 \
+					pad 0 0.1
 			fi
 
-			play -q "${fpath_share_sound}" &
+			cmd_sound_play "${fpath_share_sound}"
 			;;
-
 		play)
-
 			#  item (selected for music playback)
-			if _opt_exist b "${opt}"
+			if _exists_opt b "${opt}"
 			then
 				return 0
 			fi
 
 			local fpath_share_sound="${dpath_share_sound}/play.wav"
 
-			if ! [ -f "${fpath_share_sound}" ]
+			if ! [ -f "${fpath_share_sound}" ] && command -v sox >/dev/null 2>&1
 			then
 				sox -n "${fpath_share_sound}" \
-					synth sine 1000 trim 0 0.05 gain -30
+					synth sine 1000 trim 0 0.05 gain -30 \
+					pad 0 0.1
 			fi
 
-			play -q "${fpath_share_sound}" &
+			cmd_sound_play "${fpath_share_sound}"
 			;;
 	esac
 
@@ -732,7 +646,7 @@ print_playback_position_autosave_script()
 
 -- autosave.lua
 -- ------------
--- 
+--
 -- periodically saves watch_later data during mpv playback.
 -- accounts for periodic write synchronization on raspberry pi.
 
@@ -793,7 +707,7 @@ end
 function del_wl(data)
 	if data.reason == 'eof' or data.reason == 'stop' then
 		local playlist = mp.get_property_native('playlist')
-		
+
 		for i, entry in pairs(playlist) do
 			if entry.id == data.playlist_entry_id then
 				mp.commandv('delete-watch-later-config', entry.filename)
@@ -816,7 +730,7 @@ EOF
 
 print_usage()
 {
-	#  synopsis:  prints usage information.  
+	#  synopsis:  prints usage information.
 
 	print_funny_usage_header()
 	{
@@ -824,7 +738,7 @@ print_usage()
 			BEGIN{srand()
 			print int(min+rand()*(max-min+1))
 		}')
-		
+
 		case "${int}" in
 			0)
 				printf 'Show that stereo who'\''s boss.'
@@ -855,11 +769,13 @@ usage:
   pimp [app-rmpp]
   pimp [app-speech] [-Q] text
   pimp [app-tone] [-Q] clsh|ffpi|ffbk|ffgo|high|play
+  pimp [splash]
 
 commands:
   d, dir [-Q] [query]             List directories in fuzzy finder.
   f, file [-Q] [query]            List files in fuzzy finder.
   p, play, slap [-bdQs] [path]    Resume music playback.
+  splash                          Display boot splash for your own project.
 
 commands (not intended for user invocation):
   app-rmpp                                       Delete playback position data.
@@ -871,6 +787,14 @@ options:
   -d [path]    Play relative directory path (case-sensitive).
   -Q           Suppress all auditory navigation.
   -s           Shuffle playlist file content.
+
+environment variables:
+  PIMP_DEBUG          [1|yes|true]    Prints debug output.
+  PIMP_DPATH_CACHE    [path]          Path of pimp cache directory.
+  PIMP_DPATH_CONFG    [path]          Path of pimp configuration directory.
+  PIMP_DPATH_MUSIC    [path]          Path of music directory.
+  PIMP_DPATH_SHARE    [path]          Path of pimp share directory.
+  PIMP_DPATH_STATE    [path]          Path of pimp state directory.
 
 examples:
   pimp slap                 Resume the slap (music playback).
@@ -904,11 +828,119 @@ remove_playback_position_data()
 set_terminal_title()
 {
 	printf '\033]0;pimp\007'
+	return 0
+}
+
+_enabled_debug()
+{
+	#  synopsis:  checks for passed boolean value before displaying debugging information.
+
+	bool="${PIMP_DEBUG}"
+
+	case "${bool}" in
+		1|true|yes)
+			return 0
+			;;
+		*)
+			return 1
+			;;
+	esac
+}
+
+_exists_app_dir_tree()
+{
+	#  synopsis:  creates application file structure.
+
+	local dpath_cache="${PIMP_DPATH_CACHE}"
+	local dpath_confg="${PIMP_DPATH_CONFG}"
+	local dpath_music="${PIMP_DPATH_MUSIC}"
+	local dpath_share="${PIMP_DPATH_SHARE}"
+	local dpath_share_sound="${PIMP_DPATH_SHARE_SOUND}"
+	local dpath_state="${PIMP_DPATH_STATE}"
+	local dpath_state_pback="${PIMP_DPATH_STATE_PBACK}"
+
+	if ! [ -d "${dpath_music}" ]
+	then
+		printf 'pimp: music directory not found: %s\n' "${dpath_music}" >&2
+		return 2
+	fi
+
+	if ! [ -d "${dpath_cache}" ]
+	then
+		if ! mkdir -p "${dpath_cache}"
+		then
+			printf 'pimp: unable to create cache directory: %s\n' "${dpath_cache}" >&2
+		fi
+	fi
+
+	if ! [ -d "${dpath_confg}" ]
+	then
+		if ! mkdir -p "${dpath_confg}"
+		then
+			printf 'pimp: unable to create configuration directory: %s\n' "${dpath_confg}" >&2
+		fi
+	fi
+
+	if ! [ -d "${dpath_share}" ]
+	then
+		if ! mkdir -p "${dpath_share}"
+		then
+			printf 'pimp: unable to create share directory: %s\n' "${dpath_share}" >&2
+			return 2
+		fi
+	fi
+
+	if ! [ -d "${dpath_share_sound}" ]
+	then
+		if ! mkdir -p "${dpath_share_sound}"
+		then
+			printf 'pimp: unable to create sound effect directory: %s\n' "${dpath_share_sound}" >&2
+			return 2
+		fi
+	fi
+
+	if ! [ -d "${dpath_state}" ]
+	then
+		if ! mkdir -p "${dpath_state}"
+		then
+			printf 'pimp: unable to create state directory: %s\n' "${dpath_state}" >&2
+			return 2
+		fi
+	fi
+
+	if ! [ -d "${dpath_state_pback}" ]
+	then
+		if ! mkdir -p "${dpath_state_pback}"
+		then
+			printf 'pimp: unable to create playback position directory: %s\n' "${dpath_state_pback}" >&2
+		fi
+	fi
 
 	return 0
 }
 
-verify_dependencies()
+_exists_opt()
+{
+	#  synopsis:  confirms existence of parameter option passed from function call.
+	#
+	#  usage:
+	#    _exists_opt a "${string}"
+	#        ^
+	#        |
+	#        |
+	#        "a" as in an "-a" option when calling a function.
+	#
+	#  below, a string / $2 ("a") must match specified option / $1 ("-a").
+
+	if printf '%s' "$2" | grep -q "$1"
+	then
+		return 0  #  true
+	else
+		return 1  #  false
+	fi
+}
+
+_exists_depends()
 {
 	#  synopsis:  ensures program dependencies exist in $PATH.
 
@@ -938,42 +970,64 @@ verify_dependencies()
 	return $?
 }
 
-if ! verify_dependencies "${depends_dire}"
+_params_opt()
+{
+	printf '%s' "$*"          | \
+	grep -o '\-[a-zA-Z0-9]*'  | \
+	sed 's/-//g'              | \
+	tr -d '\n'
+}
+
+_params_str()
+{
+	printf '%s' "$*"          | \
+	sed 's/\-[a-zA-Z0-9]*//g' | \
+	sed 's/^[[:space:]]*//g'  | \
+	sed 's/[[:space:]]*$//g'
+}
+
+if ! _exists_depends "${_depends_dire}"
 then
 	exit 2
 fi
 
-if ! verify_dependencies "${depends_optional}"
+if ! _exists_depends "${_depends_optional}"
 then
 	printf '\npimp: continuing...\n' >&2
 fi
 
-if ! make_app_file_structure
+if ! _exists_app_dir_tree
 then
 	exit 2
 fi
 
-if ! [ -d "${PIMP_DPATH_MUSIC}" ]
-then
-	printf 'pimp: music directory not found: %s\n' "${PIMP_DPATH_MUSIC}" >&2
-	exit 2
-fi
-
-if [ "${PIMP_DEBUG}" = 1 ]
+if _enabled_debug
 then
 	printf 'init cmdline: %s<\n' "$*"
-	printf 'init param: %s<\n' "${param}"
+	printf 'init param: %s<\n' "${_params}"
 fi
 
 case "$1" in
+	app-tone)
+		play_tonal_sound "${_params}"
+		exit $?
+		;;
+	app-speech)
+		play_speech "${_params}"
+		exit $?
+		;;
+	app-rmpp)
+		remove_playback_position_data
+		exit $?
+		;;
 	d|dir)
-		display_dname_fzf "${param}"
+		show_dname_fzf "${_params}"
 		exit $?
 		;;
 	f|file)
 		while :
 		do
-			display_fpath_fzf "${param}"
+			show_fpath_fzf "${_params}"
 
 			case "$?" in
 				100)
@@ -990,19 +1044,13 @@ case "$1" in
 		exit $?
 		;;
 	p|play|slap)
-		play_music "${param}"
+		play_music "${_params}"
 		exit $?
 		;;
-	app-tone)
-		play_tonal_sound "${param}"
-		exit $?
-		;;
-	app-speech)
-		play_speech "${param}"
-		exit $?
-		;;
-	app-rmpp)
-		remove_playback_position_data
+	splash)
+		clear
+		show_logo
+		play_tonal_sound boot
 		exit $?
 		;;
 	*)
@@ -1011,7 +1059,7 @@ case "$1" in
 			play_music "$*"
 		fi
 
-		display_dname_fzf "$*"
+		show_dname_fzf "$*"
 		exit $?
 		;;
 esac
