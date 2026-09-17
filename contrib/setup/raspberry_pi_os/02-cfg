@@ -1,4 +1,0 @@
-#!/bin/sh -ue
-
-raspi-config nonint do_audio 0 # <------------ route audio through headphone jack
-raspi-config nonint do_boot_behaviour B2 # <-- enable console auto-login

@@ -1,5 +1,0 @@
-#!/bin/sh -ue
-
-apt update
-apt upgrade -y --assume-yes
-apt install -y --assume-yes espeak fzf mpv tmux sox
