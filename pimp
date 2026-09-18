@@ -487,17 +487,17 @@ play_tonal_sound()
 			if ! [ -f "${fpath_share_sound}" ] && command -v "${_bin_snd}" >/dev/null 2>&1
 			then
 				"${_bin_snd}" -n "${dpath_cache}/1.wav" \
-					synth sine 1000 trim 0 0.15 gain -15 \
+					synth sine 1000 trim 0 0.15 gain -20 \
 					pad 0 0.001 \
 					gain 5
 
 				"${_bin_snd}" -n "${dpath_cache}/2.wav" \
-					synth sine 1500 trim 0 0.15 gain -15 \
+					synth sine 1500 trim 0 0.15 gain -20 \
 					pad 0 0.001 \
 					gain 5
 
 				"${_bin_snd}" -n "${dpath_cache}/3.wav" \
-					synth sine 2000 trim 0 0.15 gain -15 \
+					synth sine 2000 trim 0 0.15 gain -20 \
 					pad 0 1 \
 					gain 5
 
