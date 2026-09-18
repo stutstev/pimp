@@ -23,6 +23,7 @@
     - name: apt update
       apt:
         update_cache: yes
+      changed_when: false
       become: yes
 
     - name: apt install
