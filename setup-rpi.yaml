@@ -1,0 +1,85 @@
+#!/usr/bin/ansible-playbook --ask-become-pass
+
+---
+- name:         provision raspberry pi for pimp usage
+  hosts:        all
+  connection:   ssh
+  gather_facts: yes
+
+  vars:
+    user: user
+    ansible_python_interpreter: auto_silent
+    ansible_user: '{{ user }}'
+
+  tasks:
+    - debug:
+        msg: "host: {{ ansible_fqdn }}"
+
+    - name: enable autologin in raspi-config
+      command: raspi-config nonint do_boot_behaviour B2
+      changed_when: false
+      become: yes
+
+    - name: apt update
+      apt:
+        update_cache: yes
+      become: yes
+
+    - name: apt install
+      apt:
+        name:
+          - pipewire
+          - mpv
+          - fzf
+          - tmux
+          - espeak
+          - sox
+          - fish
+        state: present
+      become: yes
+
+    - name: change {{ user }} shell to fish
+      user:
+        name: '{{ user }}'
+        shell: /usr/bin/fish
+      become: yes
+
+    - name: create fish config directory
+      file:
+        path: '{{ ansible_user_dir }}/.config/fish'
+        state: directory
+        owner: '{{ user }}'
+        group: '{{ user }}'
+        mode: u=rwx,g=,o=
+
+    - name: create fish config file
+      copy:
+        content: |
+          set fish_greeting
+          set -gx AUDIODRIVER alsa
+        dest: '{{ ansible_user_dir }}/.config/fish/config.fish'
+        owner: '{{ user }}'
+        group: '{{ user }}'
+        mode: u=rw,g=,o=
+
+    - name: create pimp directories
+      file:
+        path: '{{ item }}'
+        state: directory
+        owner: '{{ user }}'
+        group: '{{ user }}'
+        mode: u=rwx,g=,o=
+      loop:
+        - '{{ ansible_user_dir }}/.local/share/pimp'
+        - '{{ ansible_user_dir }}/.config/pimp'
+        - '{{ ansible_user_dir }}/Music'
+
+    - name: install pimp
+      copy:
+        src: pimp
+        dest: /usr/local/bin/pimp
+        owner: root
+        group: root
+        mode: u=rwx,g=rx,o=rx
+      become: yes
+
