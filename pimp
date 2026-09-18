@@ -41,6 +41,7 @@ _params="$(printf '%s\n' "$*" | awk '{$1=""; print}' | sed 's/^[[:space:]]*//g')
 PIMP_DEBUG="${PIMP_DEBUG-0}"
 PIMP_DPATH_CACHE="${PIMP_DPATH_CACHE-"${HOME}/.cache/pimp"}"
 PIMP_DPATH_CONFG="${PIMP_DPATH_CONFG-"${HOME}/.config/pimp"}"
+PIMP_DPATH_CONFG_PBACK="${PIMP_DPATH_CONFG_PBACK-"${PIMP_DPATH_CONFG}/playback"}"
 PIMP_DPATH_MUSIC="${PIMP_DPATH_MUSIC-"${HOME}/Music"}"
 PIMP_DPATH_SHARE="${PIMP_DPATH_SHARE-"${HOME}/.local/share/pimp"}"
 PIMP_DPATH_SHARE_SOUND="${PIMP_DPATH_SHARE}/sound"
@@ -303,13 +304,15 @@ play_music()
 	fi
 
 	local dpath_confg="${PIMP_DPATH_CONFG}"
+	local dpath_confg_pback="${PIMP_DPATH_CONFG_PBACK}"
 	local dpath_dname_fzf_selection=
 	local dpath_music="${PIMP_DPATH_MUSIC}"
 	local dpath_share="${PIMP_DPATH_SHARE}"
 	local dpath_state="${PIMP_DPATH_STATE}"
 	local dpath_state_pback="${PIMP_DPATH_STATE_PBACK}"
 
-	local fpath_confg_pback_input="${dpath_confg}/input.conf"
+	local fpath_confg_pback_input="${dpath_confg_pback}/input"
+	local fpath_confg_pback_exec="${dpath_confg_pback}/execution"
 	local fpath_share_script_pback_autosave="${dpath_share}/autosave.lua"
 	local fpath_state_plist="${PIMP_FPATH_STATE_PLIST}"
 
@@ -342,6 +345,14 @@ play_music()
 		fi
 	fi
 
+	if ! [ -f "${fpath_confg_pback_exec}" ]
+	then
+		if ! touch "${fpath_confg_pback_exec}"
+		then
+			printf 'pimp: unable to create playback execution configuration file: %s\n' "${fpath_confg_pback_exec}" >&2
+		fi
+	fi
+
 	if [ -f "${fpath_state_plist}" ]
 	then
 
@@ -368,6 +379,7 @@ play_music()
 			--af-add=scaletempo=speed=both \
 			--audio-pitch-correction=no \
 			--display-tags= \
+			--include="${fpath_confg_pback_exec}" \
 			--input-conf="${fpath_confg_pback_input}" \
 			--loop-playlist=inf \
 			--msg-level=all=no,term-msg=status,statusline=status,cplayer=error,ffmpeg=fatal,ffmpeg/demuxer=error \
@@ -380,10 +392,10 @@ play_music()
 			--term-playing-msg="\n\${filename}" \
 			--term-status-msg="\n(\${playlist-pos-1}/\${playlist-count}) \${time-pos} / \${duration} (\${percent-pos}%) (x\${speed}) \${?loop-file==inf:+LF }\${?mute==yes:+M }\${?pause==yes:(Paused)}" \
 			--term-title="pimp -- \${filename}" \
+			--video=no \
 			--vo=null \
 			--volume=100 \
 			--volume-max=100 \
-			--video=no \
 			--watch-later-directory="${dpath_state_pback}" \
 			--watch-later-options=volume,speed,pause,loop-file,start \
 			--watch-later-options-remove=mute,ab-loop
@@ -866,6 +878,7 @@ _exists_app_dir_tree()
 
 	local dpath_cache="${PIMP_DPATH_CACHE}"
 	local dpath_confg="${PIMP_DPATH_CONFG}"
+	local dpath_confg_pback="${PIMP_DPATH_CONFG_PBACK}"
 	local dpath_music="${PIMP_DPATH_MUSIC}"
 	local dpath_share="${PIMP_DPATH_SHARE}"
 	local dpath_share_sound="${PIMP_DPATH_SHARE_SOUND}"
@@ -891,6 +904,14 @@ _exists_app_dir_tree()
 		if ! mkdir -p "${dpath_confg}"
 		then
 			printf 'pimp: unable to create configuration directory: %s\n' "${dpath_confg}" >&2
+		fi
+	fi
+
+	if ! [ -d "${dpath_confg_pback}" ]
+	then
+		if ! mkdir -p "${dpath_confg_pback}"
+		then
+			printf 'pimp: unable to create playback configuration directory: %s\n' "${dpath_confg_pback}" >&2
 		fi
 	fi
 
