@@ -58,22 +58,30 @@
 
     - name: install pimp-login-init
       copy:
-        src: rpi-login-init.sh
-        dest: /usr/local/bin/pimp-login-init
+        src: rpi-login.sh
+        dest: /usr/local/bin/pimp-login
         owner: root
         group: root
         mode: u=rwx,g=rx,o=rx
       become: yes
 
-    - name: add pimp-login-init to user profile script
+    - name: add audiodriver env var to user profile script to stop alsa errors
       lineinfile:
         path: '{{ ansible_user_dir }}/.profile'
-        regexp: '^.*pimp-login-init.*'
-        line: 'pimp-login-init'
+        regexp: '^.*export AUDIODRIVER=alsa.*'
+        line: 'export AUDIODRIVER=alsa'
         insertafter: EOF
         state: present
         create: true
         owner: '{{ user }}'
         group: '{{ user }}'
         mode: u=rw,g=r,o=r
+
+    - name: add pimp-login to user profile script
+      lineinfile:
+        path: '{{ ansible_user_dir }}/.profile'
+        regexp: '^.*pimp-login.*'
+        line: 'pimp-login'
+        insertafter: EOF
+        state: present
 
