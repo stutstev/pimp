@@ -17,8 +17,6 @@ show_logo()
 EOF
 }
 
-#  pimp
-#  ----
 #  Copyright (c) 2022-2026 Steven Peguero (stevenpeguero.com)
 #  Source is licensed under MIT License. Refer to LICENSE file for details.
 
@@ -333,7 +331,7 @@ play_music()
 
 	if ! [ -f "${fpath_share_script_pback_autosave}" ]
 	then
-		if ! print_playback_position_autosave_script > "${fpath_share_script_pback_autosave}"
+		if ! print_share_script_pback_autosave > "${fpath_share_script_pback_autosave}"
 		then
 			printf 'pimp: unable to create playback position auto-save script: %s\n' "${fpath_share_script_pback_autosave}" >&2
 		fi
@@ -341,7 +339,7 @@ play_music()
 
 	if ! [ -f "${fpath_confg_pback_input}" ]
 	then
-		if ! touch "${fpath_confg_pback_input}"
+		if ! print_confg_pback_input > "${fpath_confg_pback_input}"
 		then
 			printf 'pimp: unable to create playback input configuration file: %s\n' "${fpath_confg_pback_input}" >&2
 		fi
@@ -652,6 +650,32 @@ play_tonal_sound()
 	return 0
 }
 
+print_confg_pback_input()
+{
+	#  synopsis:  config/playback/input
+
+	cat <<EOF
+ESC  quit-watch-later
+F6  quit-watch-later
+*  quit-watch-later
+
+INS  cycle pause
+DEL  playlist-prev
+ENTER  playlist-next
+KP_ENTER  playlist-next
+
+BS  set speed 1.0
++  multiply speed 1.01
+-  multiply speed 0.99
+
+HOME  seek 0 absolute  #  restart track
+PGUP  set loop-file inf; run ${_bin_tts} file  #  repeat track
+PGDWN  set loop-file no; run ${_bin_tts} playlist  #  repeat all / cycle through playlist
+EOF
+
+	return 0
+}
+
 print_cut_field_selection_number()
 {
 	#  description:
@@ -667,13 +691,11 @@ print_cut_field_selection_number()
 		return 0
 }
 
-print_playback_position_autosave_script()
+print_share_script_pback_autosave()
 {
-	cat <<EOF
+	#  synopsis:  share/autosave.lua
 
--- autosave.lua
--- ------------
---
+	cat <<EOF
 -- periodically saves watch_later data during mpv playback.
 -- accounts for periodic write synchronization on raspberry pi.
 

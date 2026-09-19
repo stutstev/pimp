@@ -56,7 +56,7 @@
         mode: u=rwx,g=rx,o=rx
       become: yes
 
-    - name: install pimp-login-init
+    - name: install pimp-login
       copy:
         src: rpi-login.sh
         dest: /usr/local/bin/pimp-login
