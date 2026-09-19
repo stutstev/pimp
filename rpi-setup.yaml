@@ -1,7 +1,7 @@
 #!/usr/bin/ansible-playbook --ask-become-pass
 
 ---
-- name:         provision raspberry pi for pimp usage
+- name:         install pimp on raspberry pi
   hosts:        all
   connection:   ssh
   gather_facts: yes
@@ -29,39 +29,13 @@
     - name: apt install
       apt:
         name:
-          - pipewire
-          - mpv
-          - fzf
-          - tmux
           - espeak
+          - fzf
+          - mpv
           - sox
-          - fish
+          - tmux
         state: present
       become: yes
-
-    - name: change {{ user }} shell to fish
-      user:
-        name: '{{ user }}'
-        shell: /usr/bin/fish
-      become: yes
-
-    - name: create fish config directory
-      file:
-        path: '{{ ansible_user_dir }}/.config/fish'
-        state: directory
-        owner: '{{ user }}'
-        group: '{{ user }}'
-        mode: u=rwx,g=,o=
-
-    - name: create fish config file
-      copy:
-        content: |
-          set fish_greeting
-          set -gx AUDIODRIVER alsa
-        dest: '{{ ansible_user_dir }}/.config/fish/config.fish'
-        owner: '{{ user }}'
-        group: '{{ user }}'
-        mode: u=rw,g=,o=
 
     - name: create pimp directories
       file:
@@ -71,8 +45,6 @@
         group: '{{ user }}'
         mode: u=rwx,g=,o=
       loop:
-        - '{{ ansible_user_dir }}/.local/share/pimp'
-        - '{{ ansible_user_dir }}/.config/pimp'
         - '{{ ansible_user_dir }}/Music'
 
     - name: install pimp
@@ -83,4 +55,25 @@
         group: root
         mode: u=rwx,g=rx,o=rx
       become: yes
+
+    - name: install pimp-login-init
+      copy:
+        src: rpi-login-init.sh
+        dest: /usr/local/bin/pimp-login-init
+        owner: root
+        group: root
+        mode: u=rwx,g=rx,o=rx
+      become: yes
+
+    - name: add pimp-login-init to user profile script
+      lineinfile:
+        path: '{{ ansible_user_dir }}/.profile'
+        regexp: '^.*pimp-login-init.*'
+        line: 'pimp-login-init'
+        insertafter: EOF
+        state: present
+        create: true
+        owner: '{{ user }}'
+        group: '{{ user }}'
+        mode: u=rw,g=r,o=r
 
