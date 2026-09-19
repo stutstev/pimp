@@ -17,6 +17,8 @@ show_logo()
 EOF
 }
 
+#  pimp
+#  ----
 #  Copyright (c) 2022-2026 Steven Peguero (stevenpeguero.com)
 #  Source is licensed under MIT License. Refer to LICENSE file for details.
 
@@ -98,7 +100,7 @@ show_dname_fzf()
 		--header 'pimp (dir)' \
 		--header-first \
 		--border rounded \
-		--color fg+:16,bg+:10,hl:9,hl+:1,gutter:1 \
+		--color fg+:16,bg+:10,hl:9,hl+:1,gutter:1,info:8,header:-1,prompt:-1 \
 		--prompt '> ' \
 		--algo v1 \
 		--query "${fzf_query}" \
@@ -166,7 +168,7 @@ show_fpath_fzf()
 		--header 'pimp (file)' \
 		--header-first \
 		--border rounded \
-		--color fg+:16,bg+:10,hl:9,hl+:1,gutter:1 \
+		--color fg+:16,bg+:10,hl:9,hl+:1,gutter:1,info:8,header:-1,prompt:-1 \
 		--prompt '> ' \
 		--algo v1 \
 		--query "${fzf_query}" \
